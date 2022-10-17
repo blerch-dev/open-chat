@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head', locals); %> 
+</head>
+<% if(locals.noBackground) { %>
+<body style="background: transparent;">
+<% } else { %>
+<body>
+<% } %>
+    <header><%- include('../partials/header', locals); %></header>
+    <%- include('../partials/chat-window', locals); %>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<script type="module" src="/js/chat.js"></script>
+<link rel='stylesheet' href='/css/chat.css'>
+<% if(locals.flex ?? false) { %>
+<div id="chat-window" style="flex: 1;">
+<% } else { %>
+<div id="chat-window" data-chatroom="<%= locals.chatroom ?? 'null' %>">
+<% } %>
+    <% if(locals.includeChatHeader ?? true) { %>
+        <div id="chat-controls">
+            <h4 id="chat-title"><%= locals.title %></h4>
+            <div class="chat-control-buttons">
+                <% if(locals.user?.roles & 1) { %>
+                    <!-- <button id="test-connections" class="chat-control-button"><h3 style="pointer-events: none;">TC</h3></button> -->
+                    <!-- <button id="debug-msg" class="chat-control-button"><h3 style="pointer-events: none;">Debug</h3></button> -->
+                <% } %>
+                <button id="popout-button" class="chat-control-button"><img src="../assets/svg/popout.svg"></button>
+                <button id="close-button" class="chat-control-button"><img src="../assets/svg/close.svg"></button>
+            </div>
+        </div>
+    <% } %>
+    <div id="chat-wrapper">
+        <div id="chat-events"></div>
+        <div id="chat-content"></div>
+    </div>
+    <% if(locals.includeChatSender ?? true) { %>
+        <div id="chat-input">
+            <span id="capture-list"></span>
+            <input id="chat-input-element" placeholder="Message..." type="text">
+            <button data-click="send-chat" id="send-chat">Send</button>
+        </div>
+        <div id="chat-state" style="display: none;">
+            <!-- <img id="chat-state-icon" src="">
+            <h5 id="chat-state-text">Chat broken right now, making structural changes...</h5> -->
+        </div>
+    <% } %>
+</div>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head', locals); %> 
+</head>
+<body>
+    <header><%- include('../partials/header', locals); %></header>
+    <main>
+        <h1>OpenChat</h1>
+        <p>Streamers</p>
+        <span>
+            <a href="www.kidnotkin.tv">KidNotkin</a>
+        </span>
+    </main>
+    <style>
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        span {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        span a {
+            font-size: larger;
+            padding: 5px;
+        }
+    </style>
+</body>
+</html>

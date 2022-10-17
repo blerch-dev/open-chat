@@ -1,0 +1,596 @@
+:root {
+    --fonts: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, 
+        "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+    /* #region Colors */
+    --black: #171A21;
+    --dark-grey: #2F343E;
+    --grey: #42474E;
+    --light-grey: #CBCDCF;
+    --white: #f8f9fa;
+
+    --dark-grey-50: #2F343E88;
+
+    --blue: #3777FF;
+    --light-blue: #4983FF;
+
+    --red: #CC2936;
+    --light-red: #D13C48;
+
+    --yellow: #FFB817;
+
+    --green: #35FF69;
+    /* #endregion */
+
+    /* #region Third Parties */
+    --twitch-purple: #6441A5;
+    --twitch-white: #FFFFFF;
+    /* #endregion */
+}
+
+/* #region Elements */
+
+* {
+    margin: 0;
+    position: relative;
+    color: white;
+    font-family: var(--fonts);
+    box-sizing: border-box;
+}
+
+a, .app-link {
+    cursor: pointer;
+    text-decoration: none;
+    color: var(--blue);
+    transition: 0.2s;
+}
+
+a:hover, .app-link:hover {
+    color: var(--light-blue);
+}
+
+body {
+    background-color: var(--black);
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    /* min-height: 36px; */
+    background-color: var(--dark-grey);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+header:empty {
+    display: none;
+}
+
+main {
+    flex: 1;
+    display: flex;
+    height: 100%;
+    position: relative;
+    padding: 10px;
+}
+
+/* #endregion */
+
+/* #region Components */
+
+#account * {
+    white-space: nowrap;
+}
+
+.centered-group {
+    flex: 1;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.server-info {
+    background-color: var(--grey);
+    padding: 10px;
+}
+
+.server-info pre {
+    padding-bottom: 1px;
+}
+
+.hide {
+    display: none !important;
+}
+
+.app-link {
+    padding: 10px;
+    border-radius: 3px;
+    background-color: var(--black);
+    display: block;
+}
+
+.app-links {
+    padding: 10px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.no-child-events {
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.no-child-events:hover {
+    background-color: #444444;
+}
+
+.no-child-events * {
+    pointer-events: none;
+}
+
+.streamer-card {
+    gap: 15px;
+    padding: 20px;
+    background-color: var(--dark-grey);
+    border-radius: 7px;
+    width: fit-content;
+    height: fit-content;
+    flex: 0;
+    border: 2px solid transparent;
+    transition: 0.3s;
+}
+
+.streamer-card:hover {
+    border: 2px solid var(--white);
+}
+
+.streamer-list {
+    width: 100%;
+    padding: 15px;
+    display: flex;
+    flex: 0;
+    justify-content: center;
+    gap: 15px;
+}
+
+.live-indicator {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    background-color: var(--grey);
+    border: 2px solid var(--black);
+}
+
+.live-indicator.is-live {
+    background-color: var(--red);
+}
+
+/* #endregion */
+
+/* #region Auth */
+
+form {
+    width: 40vw;
+    padding: 20px;
+    background-color: var(--dark-grey);
+    border-radius: 5px;
+    min-width: 250px;
+    display: flex;
+    flex-direction: column;
+}
+
+form .login_option_list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+form .login_option_list > label {
+    padding: 8px;
+    padding-left: 35px;
+    background-color: var(--grey);
+    border-radius: 5px;
+}
+
+form > div {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+}
+
+form > div > input {
+    background-color: var(--white);
+    border: none;
+    border-radius: 15px;
+    padding: 5px 15px;
+    outline: none;
+    flex: 1;
+    min-height: 23px;
+    color: black;
+}
+
+form > div > label {
+    font-size: 14px;
+    margin-bottom: 5px;
+    flex: 1;
+    padding-left: 15px;
+}
+
+form > div > div {
+    margin-top: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 12px;
+    gap: 8px;
+}
+
+form > div > div p {
+    padding-left: 15px;
+    font-size: small;
+    font-style: italic;
+}
+
+form > label {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+form > button {
+    background-color: var(--grey);
+    border-radius: 5px;
+    outline: none;
+    width: 125px;
+    height: 40px;
+    font-size: 20px;
+    border: none;
+    margin: auto;
+    margin-top: 30px;
+    cursor: pointer;
+}
+
+form > div > div > div {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.string_check {
+    width: 9px;
+    height: 9px;
+    border-radius: 5px;
+    background-color: rgb(255, 30, 0);
+}
+
+.string_check.pass {
+    background-color: rgb(30, 255, 0);
+}
+
+#toggle_forms {
+    color: rgb(54, 137, 247);
+    font-weight: bold;
+    padding: 10px;
+    cursor: pointer;
+}
+
+#error {
+    color: rgb(255, 30, 0);
+    padding-bottom: 10px;
+}
+
+/* Customize the label (the container) */
+.cc_container {
+    display: block;
+    position: relative;
+    padding-left: 35px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-bottom: 0px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* Hide the browser's default checkbox */
+.cc_container input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+/* Create a custom checkbox */
+.cc_checkmark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 18px;
+    width: 18px;
+    background-color: var(--white);
+    border-radius: 3px;
+}
+
+.login_option_list > label .cc_checkmark {
+    top: 10px;
+    left: 8px;
+}
+
+/* On mouse-over, add a grey background color */
+.cc_container:hover input ~ .cc_checkmark {
+    background-color: var(--white);
+}
+
+/* When the checkbox is checked, add a blue background */
+.cc_container input:checked ~ .cc_checkmark {
+    background-color: var(--blue);
+}
+
+/* Create the checkmark/indicator (hidden when not checked) */
+.cc_checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+}
+
+/* Show the checkmark when checked */
+.cc_container input:checked ~ .cc_checkmark:after {
+    display: block;
+}
+
+/* Style the checkmark/indicator */
+.cc_container .cc_checkmark:after {
+    left: 5px;
+    top: 1px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 3px 3px 0;
+    -webkit-transform: rotate(45deg);
+    -ms-transform: rotate(45deg);
+    transform: rotate(45deg);
+}
+
+/* Third Parties */
+span.spacer {
+    background-color: var(--white);
+    width: 50%;
+    max-width: 500px;
+    height: 3px;
+    border-radius: 3px;
+    margin-top: 10px;
+    margin-bottom: 20px;
+}
+
+.oauth-link {
+    width: 25vw;
+    min-width: 150px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    color: white;
+    object-fit: contain;
+    gap: 10px;
+}
+
+.oauth-link > img {
+    width: 20px;
+}
+
+#auth_twitch {
+    background-color: var(--twitch-purple);
+    border: 1.5px solid white;
+}
+
+/* #endregion */
+
+/* #region Profile */
+
+.profile-card {
+    padding: 10px;
+    border-radius: 7px;
+    background-color: var(--dark-grey);
+    max-width: min-content;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.profile-card > span {
+    display: flex;
+    align-items: center;
+    gap: 5px 8px;
+    /* flex-wrap: wrap; */
+}
+
+.profile-card > span > h3 {
+    position: relative;
+    top: 2px;
+}
+
+.profile-card > div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding-left: 5px;
+}
+
+.profile-card > div .attributes {
+    /* flex-basis: 100%;  */
+    font-style: italic;
+}
+
+.small-profile-card {
+    padding: 0px;
+    background-color: transparent;
+}
+
+.small-profile-card > span {
+    gap: 3px 5px;
+}
+
+.small-profile-card > span > img {
+    height: 21px;
+}
+
+.small-profile-card > span > h2 {
+    font-size: 16px;
+}
+
+#profile-outline {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 25px;
+    padding-top: 0px;
+    /* border-right: 2px solid #666; */
+}
+
+#profile-content {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 10px;
+    padding-top: 0px;
+}
+
+#profile-content > span {
+    border-radius: 5px;
+    padding: 10px;
+    background-color: var(--dark-grey);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+#profile-content > span > span {
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+#profile-content > span input {
+    outline: none;
+    border: none;
+    background-color: var(--grey);
+    border-radius: 5px;
+    padding: 5px;
+}
+
+.connection {
+    flex: 1 0;
+    min-height: 40px;
+    border-radius: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+}
+
+#twitch-connection {
+    background-color: var(--twitch-purple);
+    border: 1px solid white;
+}
+
+.pc-button {
+    background-color: var(--red);
+    border: none; 
+    outline: none; 
+    border-radius: 5px; 
+    cursor: pointer;
+    padding: 5px;
+    transition: all 0.3s;
+}
+
+.pc-button:hover{
+    background-color: var(--light-red);
+}
+
+.pc-button * {
+    pointer-events: none;
+}
+
+#pc-profile-card {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+@media screen and (max-width: 1200px) {
+    #profile-outline {
+        display: none;
+    }
+}
+
+/* #endregion */
+
+/* #region Admin */
+
+form.admin-form {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    width: fit-content;
+    height: fit-content;
+    gap: 10px;
+    padding: 10px;
+    min-width: fit-content;
+}
+
+form.admin-form > span {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+form.admin-form textarea {
+    /* resize: none; */
+    min-width: 210px;
+    width: 100%;
+    min-height: 150px;
+    border: 2px solid var(--white);
+    border-radius: 3px;
+    padding: 5px;
+    background-color: var(--black);
+}
+
+form.admin-form button {
+    background: var(--black);
+    border: 2px solid transparent;
+    padding: 3px;
+    border-radius: 3px;
+    transition: all 0.2s;
+}
+
+form.admin-form button:hover {
+    border: 2px solid var(--white);
+}
+
+form.admin-form button * {
+    color: white;
+    font-size: initial;
+    pointer-events: none;
+}
+
+form.admin-form header {
+    padding: 2px;
+    gap: 0px 15px;
+    justify-content: space-between;
+}
+
+/* #endregion */

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head', locals); %> 
+</head>
+<body style="height: 100%; overflow: hidden;">
+    <header><%- include('../partials/header', locals); %></header>
+    <main class="wrapper-main">
+        <%- include('../partials/stream-window', locals) %>
+        <%- include('../partials/chat-window', locals) %> 
+    </main>
+</body>
+</html>

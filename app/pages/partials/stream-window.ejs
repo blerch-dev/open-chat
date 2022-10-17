@@ -1,0 +1,43 @@
+<script type="module" src="/js/livestream.js"></script>
+<div id="stream-window">
+    <% if(locals.index) { %>
+        <div class="overlay" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 10px; background-color: black;">
+            <h2>OpenChat.dev/Live</h2>
+            <h4>Embed Any Twitch Stream with Global Chat,</h4>
+            <h4>or Visit a Reigstered Channel</h4>
+            <span style="font-style: italic; margin-top: 15px;">examples:</span>
+            <p title="Registed Channel">openchat.dev/live/<span style="font-style: italic;">channel</span></p>
+            <p title="Embed with Given Chatroom">openchat.dev/live#twitch=<span style="font-style: italic;">channel</span></p>
+            <p style="font-size: x-small;">youtube coming soon...</p>
+        </div>
+    <% } else if(locals.channel?.twitch === null || locals.channel?.youtube === null) { %>
+        <div class="overlay" style="display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; padding: 10px; background-color: black;">
+            <img src="">
+            <h3>No Channel Found...</h3>
+        </div>
+    <% } %>
+    <%
+        let player_source = `https://player.twitch.tv/?channel=${locals.channel?.twitch}&parent=${locals.host}&autoplay=true`;
+        if(typeof(player) !== 'string')
+            player = 'twitch';
+
+        switch(player) {
+            case 'twitch':
+                player_source = `https://player.twitch.tv/?channel=${locals.channel?.twitch}&parent=${locals.host}&autoplay=true`; break;
+            case 'youtube':
+                player_source = `https://www.youtube.com/channel/${locals.channel?.youtube}/live`; break;
+            default:
+                break;
+        }
+    %>
+    <iframe
+        style=<%= (locals.host === '10.0.0.134' || locals.index) ? "display: none;" : "" %>
+        id="livestream-frame"
+        src=<%= player_source %>
+        frameborder="0"
+        scrolling="no"
+        allowfullscreen="true"
+        height="100%"
+        width="100%">
+    </iframe>
+</div>

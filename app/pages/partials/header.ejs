@@ -1,0 +1,8 @@
+<% if(locals.includeHeader ?? true) { %>
+<a href="/" style="display: flex; justify-content: center; align-items: center;">
+    <img src=<%= locals.header_img || '/assets/svg/favicon.svg' %> 
+        style="height: 18px; padding-right: 5px;">
+    <h3><%= locals.header ?? locals.title ?? '' %></h3>
+</a>
+<a href="<%= locals.user ? '/profile' : '/login' %>"><p><%= locals.user?.username ?? 'Login' %></p></a>
+<% } %>

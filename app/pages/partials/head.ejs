@@ -1,0 +1,14 @@
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<title><%= locals.tab_name || locals.title || 'OpenChat' %></title>
+<link rel='stylesheet' href='/css/style.css'>
+<link rel='icon' type='<%= locals.favicon?.type ?? 'image/svg' %>' href=<%= locals.favicon?.path ?? '/assets/svg/favicon.svg' %>>
+<script type="module" src="/js/main.js"></script>
+<% let l = locals.styles ?? [];
+for(let i = 0; i < l.length; i++) { %>
+    <link rel='stylesheet' href="<%= locals.styles[i] %>">
+<% } %>
+<% l = locals.scripts ?? [];
+for(let i = 0; i < l.length; i++) { %>
+    <script type="module" src="<%= locals.scripts[i] %>"
+<% } %>

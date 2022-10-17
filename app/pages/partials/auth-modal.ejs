@@ -1,0 +1,51 @@
+<script src="/js/auth.js"></script>
+<span id="error"></span>
+<form id="l_form" action="/login" method="post" class="<%= locals.login ? "" : "hide" %>">
+    <div>
+        <label for="username">Username</label>
+        <input id="l_username" type="text" name="username">
+    </div>
+    <div>
+        <label for="password">Password</label>
+        <input id="l_password" type="password" name="password">
+    </div>
+    <div class="login_option_list">
+        <label class="cc_container">Stay Signed In
+            <input type="checkbox" name="token">
+            <span class="cc_checkmark"></span>
+        </label>
+    </div>
+    <button type="submit">Login</button>
+</form>
+<form id="s_form" action="/signup" method="post" class="<%= locals.login ? "hide" : "" %>">
+    <div>
+        <label for="email">Email</label>
+        <input id="s_email" type="email" name="email">
+    </div>
+    <div>
+        <label for="username">Username</label>
+        <input id="s_username" type="text" name="username">
+    </div>
+    <div>
+        <label for="password">Password</label>
+        <input id="s_password" type="password" name="password">
+        <div>
+            <div>
+                <span class="string_check" data-req="length_check"></span>
+                <p>Minimum Length: 8</p>
+            </div>
+        </div>
+    </div>
+    <div class="login_option_list">
+        <label class="cc_container">Stay Signed In
+            <input type="checkbox" name="token">
+            <span class="cc_checkmark"></span>
+        </label>
+    </div>
+    <button type="submit">Sign Up</button>
+</form>
+<span id="toggle_forms"><%= locals.login ? "Or Sign Up" : "Or Login" %></span>
+<!-- Add External Auths Here After Line -->
+<span class="spacer"></span>
+<a href="" id="auth_twitch" class="oauth-link"><img src="/assets/svg/twitch_logo.svg"><h3>Twitch</h3></a>
+

@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <%- include('../partials/head', locals); %>
+    </head>
+    <body>
+        <header><%- include('../partials/header', locals) %></header>
+        <main>
+            <h2><%= locals.message ?? "Unspecified Error." %></h2>
+        </main>
+    </body>
+</html>
