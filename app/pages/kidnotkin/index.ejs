@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <%- include('../partials/head', { title: 'KidNotkin.tv', favi_type: 'image/jpg', favicon: '/assets/img/kidnotkin.jpg' }); %>
+    </head>
+    <body>
+        <% 
+            var links = [
+                { link: "https://www.twitch.tv/kidnotkin", label: "Twitch" },
+                { link: "https://www.youtube.com/channel/UC_RoIpOp6eHnYIXMaj-ll-A", label: "Youtube" },
+                { link: "https://twitter.com/KidNotkin", label: "Twitter" },
+                { link: "https://discord.gg/QMfQ25PcSk", label: "Discord" },
+                { link: "https://streamlabs.com/kidnotkin", label: "Donate" },
+                { link: "https://www.patreon.com/kidnotkin", label: "Patreon" }
+            ];
+        %>
+        <header style="background: transparent;">
+            <div style="display: flex; align-items: center;">
+                <div class="header-links">
+                    <% for(var i = 0; i < links.length; i++) { %>
+                        <a href=<%= links[i].link %>><%= links[i].label %></a>
+                    <% } %>
+                </div>
+            </div>
+            <%- include('../partials/header-user', { user: user }) %>
+        </header>
+        <main class="centered-group" style="gap: 20px;">
+            <div class="module">
+                <img class="title-img" src="/assets/img/kidnotkin.jpg">
+                <div class="title-card">
+                    <h1 class="title-text">KidNotkin</h1>
+                    <p>Memer | Dreamer | Creamer</p>
+                </div>
+            </div>
+            <div class="mobile-links">
+                <% for(var i = 0; i < links.length; i++) { %>
+                    <a href=<%= links[i].link %>><%= links[i].label %></a>
+                <% } %>
+            </div>
+        </main>
+        <style>
+            body {
+                background-image: linear-gradient(#013044, #63C9D6, #DA3EA9);
+            }
+
+            .module {
+                display: flex; 
+                flex-direction: row; 
+                gap: 25px; 
+                align-items: center; 
+                background-color: var(--dark-grey); 
+                padding: 20px; 
+                border-radius: 180px; 
+                overflow: hidden;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .mobile-links {
+                display: none;
+                background-color: var(--dark-grey);
+                gap: 10px;
+                padding: 10px;
+                border-radius: 10px;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .header-links {
+                display: flex; 
+                align-items: center; 
+                gap: 10px; 
+                flex-wrap: wrap; 
+                padding-right: 20px;
+            }
+
+            .title-img {
+                height: 180px; 
+                border-radius: 50%; 
+                overflow: hidden;
+            }
+
+            .title-text {
+                font-size: 60px
+            }
+
+            .title-card {
+                margin-right: 25px;
+            }
+
+            header a {
+                white-space: nowrap;
+                color: white;
+            }
+
+            header a:hover {
+                color: white;
+                text-decoration: underline;
+            }
+
+            @media screen and (max-width: 677px) {
+                .module { border-radius: 20px; flex-direction: column; }
+                .module div * { text-align: center; }
+                .title-card { margin-right: 0; }
+            }
+
+            @media screen and (max-width: 550px) {
+                .mobile-links {
+                    display: flex;
+                    flex-wrap: wrap;
+                }
+
+                .header-links { display: none; }
+                .title-text { font-size: 40px }
+            }
+        </style>
+    </body>
+</html>

@@ -3,7 +3,8 @@ const express = require('express');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const redis = require('redis');
-const connectRedis = require('connect-redis');
+//const connectRedis = require('connect-redis');
+const pgSession = require('connect-pg-simple');
 const path = require('path');
 const crypto = require('crypto');
 
@@ -15,22 +16,26 @@ const { SiteRoutes } = require('./routes');
 class OpenChatApp {
     constructor(config, pkg) {
         var Options = {};
-        const Store = connectRedis(session);
+        const Store = pgSession(session); //connectRedis(session);
         const Client = redis.createClient({
             host: '10.0.0.134',
             port: 6379,
-            legacyMode: true
+            //legacyMode: true // for session (broken pub sub on legacy)
         });
 
         Client.on('error', (err) => {
-            Logger("\x1b[2m", '-> Redis Client Error:', err, "\x1b[0m");
+            Logger("\x1b[2m", 'Redis Client Error:', err, "\x1b[0m");
         });
         Client.on('connect', (...args) => {
-            //Logger("\x1b[2m", '-> Redis Client Connected', "\x1b[0m");
+            //Logger("\x1b[2m", 'Redis Client Connected', "\x1b[0m");
         });
 
+        const Auth = new AuthServer(config, Client);
         const SessionParse = session({
-            store: new Store({ client: Client }),
+            store: new Store({
+                pool: Auth.getPool(),
+                tableName: 'session'
+            }),
             secret: config?.app?.secret || 'default_secret',
             resave: false,
             saveUninitialized: false,
@@ -39,12 +44,11 @@ class OpenChatApp {
                 httpOnly: true,
                 path: '/',
                 domain: config?.app?.env === 'dev' ? 'localhost' : 'openchat.dev',
-                maxAge: (1000 * 60 * 60 * 24) * 0.5
+                maxAge: (1000 * 60 * 60 * 24) * 0.5 // Days
             }
         })
 
         const Routes = {};
-        const Auth = new AuthServer(config, Client);
         const Chat = new ChatServer(config, SessionParse, Client, Auth);
 
         this.getConfig = () => { return config; }
@@ -273,6 +277,10 @@ class OpenChatApp {
                     res.json({ Okay: false, Signup: false, Error: { message: "Bad Signup Attempt." } });
                 }
             });
+        });
+
+        app.get('/profile', (req, res) => {
+            res.render('generic/profile', this.getOptions());
         });
 
         app.get('/', (req, res) => {

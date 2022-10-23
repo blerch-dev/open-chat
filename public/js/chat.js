@@ -18,6 +18,7 @@ class ChatClient {
         var Socket = null;
         var User = null;
         var Channel = null;
+        var Room = null;
 
         this.setSocket = (socket) => {
             if(socket instanceof WebSocket) {
@@ -39,6 +40,9 @@ class ChatClient {
             this.setChatTitle( channel?.name ?? channel?.id ?? 'Undefined - 1'); 
         }
         this.getChannel = () => { return Channel }
+
+        this.setRoom = (str) => { Room = str; }
+        this.getRoom = () => { return Room; }
 
         this.getChatElements = () => { return ChatElem; }
         this.setSetting = (label, value) => { Settings[label] = value; }
@@ -118,10 +122,10 @@ class ChatClient {
 
         //console.log(`Connecting to ChatServer at ${url}`);
         let socket = new WebSocket(url);
+        this.setRoom(document.getElementById('chat-window')?.dataset?.chatroom ?? 'null');
         socket.addEventListener('open', (e) => {
-            //console.log("Connected to ChatServer.");
-            let room_id = document.getElementById('chat-window')?.dataset?.chatroom ?? 'null';
-            socket.send(JSON.stringify({ room: room_id }));
+            //console.log("Connected to ChatServer. Sending Room ID.", room_id);
+            socket.send(JSON.stringify({ room: this.getRoom() }));
         });
 
         socket.addEventListener('message', (e) => {
@@ -160,6 +164,9 @@ class ChatClient {
         if(json.ServerUpdate !== undefined)
             this.serverUpdate(json);
 
+        if(json.ServerRequest !== undefined)
+            this.serverRequest(json);
+
         if(json.ChatMessage !== undefined)
             this.chatMessage(json);
     }
@@ -184,6 +191,15 @@ class ChatClient {
                 case 'channel':
                     this.setChannel(data['channel']); break;
             }
+        }
+    }
+
+    async serverRequest(data) {
+        switch(data.ServerRequest) {
+            case 'room_id':
+                this.getSocket().send(JSON.stringify({ room: this.getRoom() })); break;
+            default:
+                console.log('No Request Case:', data); break;
         }
     }
 

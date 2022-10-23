@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head', locals); %> 
+</head>
+<body>
+    <header><%- include('../partials/header', locals); %></header>
+    <main style="padding: 10px;">
+        <div id="profile-outline">
+            <a href="#pc-profile-card">Profile Card</a>
+            <a href="#pc-details">Details</a>
+            <a href="#pc-connections">Connections</a>
+            <a href="#pc-channel">Channel</a>
+        </div>
+        <div id="profile-content">
+            <div id="pc-profile-card"><h3>Profile Card</h3></div>
+            <%- include('../partials/profile-card', locals); %>
+            <span id="pc-details">
+                <h3>Details</h3>
+                <span>
+                    <label for="pc-details-username">Username (not changable yet)</label>
+                    <input type="text" id="pc-details-username" value="<%= locals?.user?.username ?? "" %>">
+                </span>
+                <span>
+                    <label for="pc-details-email">Email (not changable yet)</label>
+                    <input type="text" id="pc-details-username" value="<%= locals?.user?.email ?? "" %>">
+                </span>
+            </span>
+            <span id="pc-connections">
+                <h3>Connections</h3>
+                <% if(typeof(locals?.user?.connections?.twitch) === 'object') { %>
+                    <span>
+                        <label>Twitch</label>
+                        <h3><%= locals.user.connections.twitch?.login %></h3>
+                    </span>
+                <% } %>
+            </span>
+            <span id="pc-channel">
+                <h3>Channels</h3>
+                <% if(typeof(locals?.user?.channels) === 'object') { %>
+                    <% var keys = Object.keys(locals.user.channels);
+                    for(var i = 0; i < keys.length; i++) { %>
+                        <span>
+                            <label><%= keys[i] %></label>
+                            <h3><%= locals.user.channels[keys[i]] %></h3>
+                        </span>
+                    <% } %>
+                <% } %>
+            </span>
+            <span id="pc-logout">
+                <button class="pc-button" data-href="/logout">
+                    <h3>Logout</h3>
+                </button>
+                <% if(false) { %>
+                    <button class="pc-button" data-href="/logout?forceAll=true">
+                        <h3>Logout All Decives</h3>
+                    </button>
+                <% } %>
+            </span>
+        </div>
+    </main>
+</body>
+</html>

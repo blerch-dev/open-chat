@@ -4,5 +4,5 @@
         style="height: 18px; padding-right: 5px;">
     <h3><%= locals.header ?? locals.title ?? '' %></h3>
 </a>
-<a href="<%= locals.user ? '/profile' : '/login' %>"><p><%= locals.user?.username ?? 'Login' %></p></a>
+<%- include('./header-user', locals) %>
 <% } %>

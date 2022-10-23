@@ -3,7 +3,18 @@ const { Route, Channel } = require('../../model');
 const { Logger } = require('../../dev/tools');
 
 //'www.kidnotkin.tv'
-const KidRoute = new Route(null, (router, getAll, set, db) => {
+const KidRoute = new Route('kidnotkin.tv', (router, getAll, set, db) => {
+    router.get('*', (req, res, next) => {
+        set('tab_name', 'KidNotkin');
+        set('header_img', '/assets/img/kidnotkin.jpg');
+        set('favicon', {
+            path: '/assets/img/kidnotkin.jpg',
+            type: 'image/jpg'
+        });
+
+        return next();
+    });
+
     router.get('/live', (req, res, next) => {
         db.getChannel({ channel_id: 'kidnotkin' }).then((output) => {
             if(!(output instanceof Channel)) {
@@ -23,15 +34,8 @@ const KidRoute = new Route(null, (router, getAll, set, db) => {
         });
     });
 
-    router.get('*', (req, res, next) => {
-        set('tab_name', 'KidNotkin');
-        set('header_img', '/assets/img/kidnotkin.jpg');
-        set('favicon', {
-            path: '/assets/img/kidnotkin.jpg',
-            type: 'image/jpg'
-        });
-
-        return next();
+    router.get('/', (req, res, next) => {
+        res.render('kidnotkin/index', getAll());
     });
 });
 

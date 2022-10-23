@@ -114,14 +114,14 @@ class ChatServer {
             for(let i = 0; i < socket.length; i++) {
                 if(!Array.isArray(sockets) || sockets.length <= 1) {
                     Users[channel_id].delete(id);
-                    Logger('Removed User:', user?.username ?? user?.id, channel_id);
+                    Logger('Removed User:', user?.username ?? user?.id ?? 'anon', channel_id);
                 } else if(sockets.length > 1) {
                     let socket_ind = sockets.indexOf(socket[i]);
                     //Logger('Socket Splice Index:', socket_ind);
                     if(socket_ind > -1) {
                         sockets.splice(socket_ind, 1);
                         Users[channel_id].set(id, sockets);
-                        Logger('Closed Socket:', user?.username ?? user?.id, channel_id);
+                        Logger('Closed Socket:', user?.username ?? user?.id ?? 'anon', channel_id);
                     }
                 }
             }
@@ -306,6 +306,8 @@ class ChatServer {
             }
 
             socket.on('message', (data) => {
+                //Logger("Message:", data.toString());
+
                 let json = null;
                 if(!connected) {
                     try {
@@ -330,6 +332,8 @@ class ChatServer {
             socket.on('close', (...args) => {
                 this.onClose(socket, user, channel_id, ...args)
             });
+
+            socket.send(JSON.stringify({ ServerRequest: 'room_id' }));
         });
     }
 
@@ -525,7 +529,7 @@ class AuthServer {
         let authed = false, errors = [], user = null;
         // Creds
         if(!authed) {
-            //Logger(' -> Creds:', username, password, createToken);
+            //Logger('Creds:', username, password, createToken);
             if(typeof(username) === 'string' && typeof(password) === 'string') {
                 let result = await this.getUser({ username: username });
                 if(result instanceof Error) {
@@ -544,7 +548,7 @@ class AuthServer {
                 }
 
                 if(authed && user instanceof User && createToken) {
-                    let result = await this.createUserToken(user.getDetails().uuid.getValue);
+                    let result = await this.createUserToken(user.getDetails().uuid.getValue());
                     if(token instanceof Error) {
                         result.push(result)
                     } else if(typeof(result) === 'string') {
@@ -556,13 +560,13 @@ class AuthServer {
                     }
                 }
             }
-            //Logger(` -> Authed: ${authed}`);
-            //Logger(" -> Errors:", errors.length > 0 ? errors : "No Errors.");
+            //Logger(`Authed: ${authed}`);
+            //Logger("Errors:", errors.length > 0 ? errors : "No Errors.");
         }
 
         // Token
         if(!authed) {
-            Logger(' -> Token:', token);
+            Logger('Token:', token);
             if(typeof(token) === 'string') {
                 let parts = token.split('-');
                 let found_token = await this.getToken(parts[0]);
@@ -605,13 +609,13 @@ class AuthServer {
                     }
                 }
             }
-            Logger(` -> Authed: ${authed}`);
-            Logger(" -> Errors:", errors.length > 0 ? errors : "No Errors.");
+            Logger(`Authed: ${authed}`);
+            Logger("Errors:", errors.length > 0 ? errors : "No Errors.");
         }
 
         // Twitch
         if(!authed) {
-            Logger(' -> Twitch:', twitch_tokens, twitch_code);
+            Logger('Twitch:', twitch_tokens, twitch_code);
             let tokens = null;
             if(typeof(twitch_tokens) === 'string') {
                 // decrypt token object
@@ -622,8 +626,8 @@ class AuthServer {
             if(typeof(tokens) === 'object') {
 
             }
-            Logger(` -> Authed: ${authed}`);
-            Logger(" -> Errors:", errors.length > 0 ? errors : "No Errors.");
+            Logger(`Authed: ${authed}`);
+            Logger("Errors:", errors.length > 0 ? errors : "No Errors.");
         }
 
         Logger("\x1b[0m");
@@ -666,8 +670,62 @@ class AuthServer {
 
     async getUserFromTwitch(tokens) {} // Tokens could be string (code) or object (tokens)
 
-    async createUser(user) {
+    async createUser(user_data) {
+        let user = user_data instanceof User ? user_data : new User(user_data, true);
+        if(user instanceof Error)
+            return user;
+        else if(!(user instanceof User))
+            return new Error("Failed to create a user instance.");
 
+        let data = user.getDetails();
+        let str = 'SELECT uuid, username, email FROM users WHERE uuid = $1 OR LOWER(username) LIKE $2';
+        let args = [data.uuid.getValue(), data.username];
+        if(typeof(data.email) === 'string') {
+            str += ' OR LOWER(email) LIKE $3';
+            args.push(data.email);
+        }
+
+        let result = await this.rawQuery(str, args);
+        if(result instanceof Error) {
+            Logger("Bad User Check", str, args, result);
+            return result;
+        }
+
+        // Checks if ID/Username/Email is a match (should be unique. If UUID is the only match, generate new UUID and check only that)
+        // Error return for now - TODO
+        if(result?.rowCount > 0) {
+            Logger("Unique Check", user.toJSON(), result.rows);
+            return Error("Non Unique ID, Email, or Username. Contact Admins.");
+        }
+
+        str = 'INSERT INTO users (uuid, username, email, hash, salt, created_at, roles) VALUES ($1, $2, $3, $4, $5, $6, $7)';
+        args = new Array(7);
+
+        args[0] = data.uuid.getValue();
+        args[1] = data.username;
+        args[2] = data.email;
+        
+        if(typeof(user_data.password) === 'string') {
+            let hash = await HashValue(user_data.password);
+            if(hash instanceof Error) {
+                Logger("Bad Security Hash.", hash);
+                return Error("Server Error. Please Try Again Later.");
+            }
+
+            args[3] = hash.hash;
+            args[4] = hash.salt;
+        } else {
+            args[3] = args[4] = null;
+        }
+
+        args[5] = new Date().toUTCString();
+        args[6] = data.roles;
+
+        result = await this.rawQuery(str, args);
+        if(result instanceof Error)
+            return result;
+
+        return user;
     }
 
     async updateUser(user_id, data) {}

@@ -1,0 +1,14 @@
+<div class="profile-card <%= locals?.small ? 'small-profile-card' : '' %>">
+    <% if(locals?.user && !(locals?.user instanceof Error)) { %>
+        <span>
+            <% if(!locals?.small) { %>
+                <img src="<%= locals?.user?.icon || '../assets/svg/default_icon.svg' %>"/>
+                <h5 style="<%= `font-size: 28px; color: ${locals?.user?.color || '#fff'}` %>"><%= locals?.user?.username %></h5>
+            <% } else { %>
+                <h5><%= locals?.user?.username %></h5>
+            <% } %>
+        </span>
+    <% } else { %>
+        <span style="white-space: nowrap;"><h5><%= locals?.small ? "Log In" : "No User Data" %></h5></span>
+    <% } %>
+</div>
