@@ -233,6 +233,7 @@ class ChatServer {
     
         this.setChannel = (label, value) => { Channels[label] = value; }
         this.getChannel = (label) => { return Channels[label]; }
+        this.getAllChannels = () => { return Channels; }
     }
 
     async start(srv) {
@@ -244,8 +245,6 @@ class ChatServer {
 
         await this.getListener().connect();
         let wss = this.configure(srv);
-
-        //this.getRedis().subscribe
 
         return wss;
     }
@@ -261,17 +260,30 @@ class ChatServer {
             this.onError(error);
         });
 
-        //this.getListener().on('error', (...args) => { Logger('Listener Error:', ...args) });
-        // this.getListener().subscribe(`msg-${this.getConfig()?.chat?.id ?? 'general'}`, (msg) => {
-        //     this.onPublish(msg);
-        // });
+        this.getListener().on('error', (...args) => { Logger('Listener Error:', ...args) });
+        let keys = this.getAllChannels()?.keys ?? []; keys = ['general', ...keys];
+        for(let i = 0; i < keys.length; i++) {
+            this.getListener().subscribe(`msg-${keys[i]}`, (msg) => {
+                this.onPublish(msg);
+            });
+        }
 
         // Ping/Pong
+        setInterval(() => {
+            wss.clients.forEach((client) => {
+                if(client.alive === false)
+                    return client.terminate();
+
+                client.alive = false;
+                client.send('ping');
+            })
+        }, (this.getConfig()?.chat?.hb || 30) * 1000);
 
         return wss;
     }
 
     onConnection(socket, req) {
+        socket.alive = true;
         let sess = this.getSession();
         sess(req, {}, () => {
             let user = req.session?.user;
@@ -307,11 +319,12 @@ class ChatServer {
 
             socket.on('message', (data) => {
                 //Logger("Message:", data.toString());
+                if(data.toString() === 'pong') { socket.alive = true; return; }
 
                 let json = null;
                 if(!connected) {
                     try {
-                        json = JSON.parse(data);
+                        json = JSON.parse(data.toString());
                         //Logger('JSON:', json);
                         if(json?.room === 'null' || json?.room == null) {
                             socket.send({ ServerMessage: `No Channel Found for ${json?.room}`});
@@ -338,7 +351,7 @@ class ChatServer {
     }
 
     onMessage(socket, user, channel_id, data) {
-        //Logger(user?.username ?? 'anon', '->', data);
+        Logger(user?.username ?? 'anon', ':', channel_id, '->', data);
         let json = null;
         try { json = JSON.parse(data); } catch(err) { Logger("Parse Err:", err); }
         if(json == null) {
@@ -352,11 +365,13 @@ class ChatServer {
             message: json?.msg
         });
 
-        // Redis Publish
-        // this.getRedis().publish(`msg-${this.getConfig()?.chat?.id ?? 'general'}`, msg);
-
-        // Local Call
-        this.onPublish(msg);
+        // Redis Publish/Local Publish
+        if(this.getConfig()?.chat?.local_publish ?? true) {
+            this.getRedis().publish(`msg-${this.getConfig()?.chat?.id ?? 'general'}`, msg);
+        } else {
+            this.onPublish(msg);
+        }
+        
     }
 
     async onPublish(msg) {
@@ -761,6 +776,14 @@ class AuthServer {
         }
 
         return data;
+    }
+
+    async twitchCodeAuth(code) {
+
+    }
+
+    async twitchTokenAuth(tokens) {
+
     }
 
     // User Tokens
