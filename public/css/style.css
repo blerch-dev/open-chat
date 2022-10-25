@@ -208,14 +208,14 @@ form > div {
 }
 
 form > div > input {
-    background-color: var(--white);
+    background-color: var(--black);
     border: none;
     border-radius: 15px;
     padding: 5px 15px;
     outline: none;
     flex: 1;
     min-height: 23px;
-    color: black;
+    color: var(--white);
 }
 
 form > div > label {
@@ -317,7 +317,7 @@ form > div > div > div {
     left: 0;
     height: 18px;
     width: 18px;
-    background-color: var(--white);
+    background-color: var(--black);
     border-radius: 3px;
 }
 
@@ -328,7 +328,7 @@ form > div > div > div {
 
 /* On mouse-over, add a grey background color */
 .cc_container:hover input ~ .cc_checkmark {
-    background-color: var(--white);
+    background-color: var(--dark-grey);
 }
 
 /* When the checkbox is checked, add a blue background */
@@ -363,7 +363,7 @@ form > div > div > div {
 
 /* Third Parties */
 span.spacer {
-    background-color: var(--white);
+    background-color: var(--dark-grey);
     width: 50%;
     max-width: 500px;
     height: 3px;
@@ -391,7 +391,7 @@ span.spacer {
 
 #auth_twitch {
     background-color: var(--twitch-purple);
-    border: 1.5px solid white;
+    /* border: 1.5px solid white; */
 }
 
 /* #endregion */

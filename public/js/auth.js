@@ -59,13 +59,13 @@ document.addEventListener('DOMContentLoaded', (e) => {
     // Twitch Button
     let url = `https://id.twitch.tv/oauth2/authorize`;
     url += `?client_id=${TWITCH_CLIENT_ID}`;
-    url += `&redirect_uri=${'https://' + window.location.hostname + '/auth/twitch'}`;
+    url += `&redirect_uri=${window.location.protocol + "//" + window.location.host + '/auth/twitch'}`;
     url += `&response_type=code`;
     url += `&scope=user:read:subscriptions`;
     url += `+channel:read:polls+channel:read:subscriptions+channel:read:vips`;
     url += `+moderation:read+moderator:read:blocked_terms`;
     url += `+chat:edit+chat:read`;
-    url += `&state=${window.location.hostname}-twitch`;
+    url += `&state=Twitch`;
     document.getElementById("auth_twitch") ? document.getElementById("auth_twitch").href = url : null;
 
     // Checks password string - Not Used

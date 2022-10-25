@@ -2,6 +2,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const http = require('http');
+const https = require('https');
 const ws = require('ws');
 const pg = require('pg');
 
@@ -327,19 +328,19 @@ class ChatServer {
                         json = JSON.parse(data.toString());
                         //Logger('JSON:', json);
                         if(json?.room === 'null' || json?.room == null) {
-                            socket.send({ ServerMessage: `No Channel Found for ${json?.room}`});
+                            socket.send(JSON.stringify({ ServerMessage: `No Channel Found for ${json?.room}`}));
                             return;
                         } else {
                             connect_user(json.room);
                         }
-                    } catch(err) { Logger('JSON Parse Error:', err); }
+                    } catch(err) { Logger('JSON Parse Error:', err, data.toString()); }
                     return;
                 }
 
                 if(user?.id == undefined || this.isMuted(user, channel_id) || this.isBanned(user, channel_id))
                     return;
 
-                this.onMessage(socket, user, channel_id, data.toString());
+                this.onMessage(socket, user, channel_id, json);
             });
 
             socket.on('close', (...args) => {
@@ -352,9 +353,7 @@ class ChatServer {
 
     onMessage(socket, user, channel_id, data) {
         Logger(user?.username ?? 'anon', ':', channel_id, '->', data);
-        let json = null;
-        try { json = JSON.parse(data); } catch(err) { Logger("Parse Err:", err); }
-        if(json == null) {
+        if(data == null) {
             socket.send(JSON.stringify({ ServerMessage: 'Failed to parse message.' }));
             return;
         }
@@ -362,7 +361,7 @@ class ChatServer {
         let msg = JSON.stringify({
             user: user,
             channel: channel_id,
-            message: json?.msg
+            message: data?.msg
         });
 
         // Redis Publish/Local Publish
@@ -461,6 +460,50 @@ class AuthServer {
     }
 
     // Helper Functions
+    async fetch(url, options, cb) {
+        url = new URL(url);
+        options = {
+            hostname: url.hostname,
+            port: options?.port ?? url?.port ?? 80,
+            path: url.pathname + url.search,
+            method: options?.method ?? 'GET',
+            headers: {
+                'Content-Type': options?.headers?.['Content-Type'] ?? 'application/json'
+            }
+        };
+
+        //Logger("Local Fetch:", options);
+
+        let promise = new Promise((res, rej) => {
+            try {
+                https.get(url, options, (response) => {
+                    this.jsonBodyParse(response, res, rej)
+                });
+            } catch(err) {
+                res(err);
+            }
+        });
+
+        return await promise;
+    }
+
+    async jsonBodyParse(response, res, rej) {
+        let body = "";
+
+        response.on("data", (chunk) => {
+            body += chunk;
+        });
+
+        response.on("end", () => {
+            try {
+                let json = JSON.parse(body);
+                res(json);
+            } catch(error) {
+                res(error);
+            }
+        });
+    }
+
     async rawQuery(str, args) {
         let promise = new Promise((res, rej) => {
             this.getPool().query(str, args, (err, result) => {
@@ -683,7 +726,9 @@ class AuthServer {
 
     async getUserFromToken(token) {}
 
-    async getUserFromTwitch(tokens) {} // Tokens could be string (code) or object (tokens)
+    async getUserFromTwitch(tokens) {
+
+    }
 
     async createUser(user_data) {
         let user = user_data instanceof User ? user_data : new User(user_data, true);
@@ -747,7 +792,66 @@ class AuthServer {
 
     async deleteUser(user_id) {}
 
-    async associateUser(user, data) {}
+    async associateTwitchUser(user_id, user_data) {
+        let twitch_data = {
+            id: user_data.twitch_id,
+            login: user_data.twitch_login
+        }
+
+        if(twitch_data.id === undefined || twitch_data.login === undefined) {
+            Logger("Bad Twitch Association", user_id, user_data, twitch_data);
+            return Error("Missing Required Fields.");
+        }
+
+        // Channel Connection
+        if(twitch_data.id != undefined && twitch_data.login != undefined) {
+            let str = 'INSERT INTO user_connections (uuid, twitch_id, twitch_login) VALUES ($1, $2, $3)';
+            str += ' ON CONFLICT (uuid) DO UPDATE SET twitch_id = $2, twitch_login = $3 WHERE user_connections.uuid = $1;'
+            let args = [user_id, twitch_data.id, twitch_data.login];
+
+            let result = await this.rawQuery(str, args);
+            if(result instanceof Error)
+                return result;
+        }
+
+        // Channel Roles
+        if(user_data.subs != undefined && user_data.subs.length > 0) {
+            let promises = [];
+            for(let i = 0; i < user_data.subs.length; i++) {
+                let sub = user_data.subs[i];
+                let str = 'SELECT * FROM channel_roles WHERE uuid = $1 AND channel_id = $2';
+                let args = [user_id, sub.channel_id];
+
+                promises.push({p: this.rawQuery(str, args), index: i});
+            }
+
+            let updates = [], inserts = [];
+            for(let i = 0; i < promises.length; i++) {
+                let sub = user_data.subs[promises[i].index];
+                let result = await promises[i].p;
+                if(result instanceof Error) {
+                    return result;
+                } else if(result.rowCount > 0) {
+                    let str = 'UPDATE channel_roles SET roles = $3 WHERE uuid = $1 AND channel_id = $2';
+                    let args = [user_id, sub.channel_id, sub.roles];
+                    updates.push(this.rawQuery(str, args));
+                } else {
+                    let str = 'INSERT INTO channel_roles (uuid, channel_id, roles) VALUES ($1, $2, $3)';
+                    let args = [user_id, sub.channel_id, sub.roles];
+                    inserts.push(this.rawQuery(str, args));
+                }
+            }
+
+            promises = [...updates, ...inserts];
+            for(let i = 0; i < promises.length; i++) {
+                let result = await promises[i];
+                if(result instanceof Error)
+                    return result;
+            }
+        }
+
+        return true;
+    }
 
     async getUserChannelRoles(user_id) {
         let result = await this.selectQueryParse(['uuid'], [user_id], 'channel_roles');
@@ -778,12 +882,19 @@ class AuthServer {
         return data;
     }
 
-    async twitchCodeAuth(code) {
+    async twitchCodeAuth(user, code, redirect) {
+        Logger("Twitch Code Auth", user, code, redirect);
+        if(code === 'missing')
+            return Error("Did not find twitch code.");
 
+        let url = `https://id.twitch.tv/oauth2/token?client_id=${this.getConfig().twitch.id}&client_secret=${this.getConfig().twitch.secret}`;
+        url += `&code=${code}&grant_type=authorization_code&redirect_uri=${redirect || 'https://www.openchat.dev/auth/twitch'}`;
+        let tokens = await this.fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/vnd.twitchtv.v3+json' } });
+        Logger("Tokens:", tokens);
     }
 
-    async twitchTokenAuth(tokens) {
-
+    async twitchTokenAuth(user, tokens) {
+        Logger("Twitch Token Auth", user, tokens);
     }
 
     // User Tokens

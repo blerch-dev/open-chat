@@ -125,7 +125,7 @@ class ChatClient {
         this.setRoom(document.getElementById('chat-window')?.dataset?.chatroom ?? 'null');
         socket.addEventListener('open', (e) => {
             //console.log("Connected to ChatServer. Sending Room ID.", room_id);
-            socket.send(JSON.stringify({ room: this.getRoom() }));
+            //socket.send(JSON.stringify({ room: this.getRoom() }));
         });
 
         socket.addEventListener('message', (e) => {

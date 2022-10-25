@@ -240,14 +240,24 @@ class OpenChatApp {
             res.render('generic/live', this.getOptions());
         });
 
-        // Auth
-        let auth_routes = [];
+        //// Auth
+
+        // Twitch
+        app.post('/auth/twitch', (req, res, next) => {
+            let redirect = req.protocol + '//' + req.get('host') + '/auth/twitch';
+            this.getAuth().twitchCodeAuth(this.getOption('user'), req.query.code, redirect);
+        });
+
+        app.get('/auth/twitch', (req, res, next) => {
+            res.render('generic/oauth', this.getOptions());
+        });
 
         app.get('/login', (req, res, next) => {
             this.setOption('login', true);
             res.render('generic/auth', this.getOptions());
         });
 
+        // Local
         app.post('/login', (req, res, next) => {
             this.getAuth().Login(req, res).then((output) => {
                 if(output instanceof User) {
@@ -279,6 +289,7 @@ class OpenChatApp {
             });
         });
 
+        // Generic Pages
         app.get('/profile', (req, res) => {
             res.render('generic/profile', this.getOptions());
         });
