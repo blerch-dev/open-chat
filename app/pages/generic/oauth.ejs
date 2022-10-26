@@ -18,26 +18,30 @@
                 document.getElementById('auth_header').textContent = `Authing User from${ typeof(t) === 'string' ? ' ' + t : '' } Credientials`;
             });
 
+            const fetchCode = <%= JSON.stringify(locals.fetchCode) %>;
+            console.log("Fetch Code:", fetchCode, typeof(fetchCode));
             let oauth_code = window.location.search.split('&')[0].split('=')[1];
-            fetch(`/auth/twitch?code=${typeof(oauth_code) === 'string' ? oauth_code : 'missing'}`, { method: 'POST' }).then((resp) => {
-                resp.json().then((output) => {
-                    console.log("Auth Twitch", output);
-                    if(output.Error == undefined) {
-                        //window.location.href = '/profile';
-                        let elem = document.createElement('label');
-                        elem.textContent = 'Success.';
-                        document.getElementById('auth_output').appendChild(elem);
-                    } else {
-                        let elem = document.createElement('label');
-                        elem.textContent = 'Error on auth. Try again later.';
-                        document.getElementById('auth_output').appendChild(elem);
-                        
-                        elem = document.createElement('pre');
-                        elem.textContent = `${output.Error?.Name ? `${output.Error.Name} ` : ''}${output.Error?.Message || 'Undefined Error'}`;
-                        document.getElementById('auth_output').appendChild(elem);
-                    }
+            if(fetchCode) {
+                fetch(`/auth/twitch?code=${typeof(oauth_code) === 'string' ? oauth_code : 'missing'}`, { method: 'POST' }).then((resp) => {
+                    resp.json().then((output) => {
+                        console.log("Auth Twitch", output);
+                        if(output.Error == undefined) {
+                            //window.location.href = '/profile';
+                            let elem = document.createElement('label');
+                            elem.textContent = 'Success.';
+                            document.getElementById('auth_output').appendChild(elem);
+                        } else {
+                            let elem = document.createElement('label');
+                            elem.textContent = 'Error on auth. Try again later.';
+                            document.getElementById('auth_output').appendChild(elem);
+                            
+                            elem = document.createElement('pre');
+                            elem.textContent = `${output.Error?.Name ? `${output.Error.Name} ` : ''}${output.Error?.Message || 'Undefined Error'}`;
+                            document.getElementById('auth_output').appendChild(elem);
+                        }
+                    });
                 });
-            })
+            }
         </script>
         <style>
             .lds-ellipsis {

@@ -24,6 +24,10 @@ class OpenChatApp {
         });
 
         Client.on('error', (err) => {
+            if(err.code == 'ECONNREFUSED') {
+                throw new Error("Redis Server Refusing Connection. Closing App.");
+            }
+
             Logger("\x1b[2m", 'Redis Client Error:', err, "\x1b[0m");
         });
         Client.on('connect', (...args) => {
@@ -244,11 +248,13 @@ class OpenChatApp {
 
         // Twitch
         app.post('/auth/twitch', (req, res, next) => {
-            let redirect = req.protocol + '//' + req.get('host') + '/auth/twitch';
+            let redirect = req.protocol + '://' + req.get('host') + '/auth/twitch';
             this.getAuth().twitchCodeAuth(this.getOption('user'), req.query.code, redirect);
         });
 
         app.get('/auth/twitch', (req, res, next) => {
+            //Logger("Cookies:", req.cookies);
+            this.setOption('fetchCode', req.cookies?.twitch === undefined);
             res.render('generic/oauth', this.getOptions());
         });
 

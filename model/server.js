@@ -460,15 +460,15 @@ class AuthServer {
     }
 
     // Helper Functions
-    async fetch(url, options, cb) {
+    async fetch(url, options) {
         url = new URL(url);
         options = {
             hostname: url.hostname,
             port: options?.port ?? url?.port ?? 80,
             path: url.pathname + url.search,
             method: options?.method ?? 'GET',
-            headers: {
-                'Content-Type': options?.headers?.['Content-Type'] ?? 'application/json'
+            headers: options?.headers ?? {
+                'Content-Type': 'application/json'
             }
         };
 
@@ -792,6 +792,65 @@ class AuthServer {
 
     async deleteUser(user_id) {}
 
+    async getUserChannelRoles(user_id) {
+        let result = await this.selectQueryParse(['uuid'], [user_id], 'channel_roles');
+
+        let data = {};
+        if(result instanceof Error || result.rowCount == 0)
+            return data;
+
+        for(let i = 0; i < result.rows.length; i++) {
+            data[result.rows[i].channel_id] = result.rows[i].roles;
+        }
+
+        return data;
+    }
+
+    async getUserConnections(user_id) {
+        let result = await this.selectQueryParse(['uuid'], [user_id], 'user_connections');
+
+        let data = {};
+        if(result instanceof Error || result.rowCount == 0)
+            return data;
+
+        data.twitch = {
+            id: result.rows[0].twitch_id,
+            login: result.rows[0].twitch_login
+        }
+
+        return data;
+    }
+
+    async twitchCodeAuth(user, code, redirect) {
+        //Logger("Twitch Code Auth", user, code, redirect);
+        if(code === 'missing')
+            return Error("Did not find twitch code.");
+
+        let url = `https://id.twitch.tv/oauth2/token?client_id=${this.getConfig().twitch.id}&client_secret=${this.getConfig().twitch.secret}`;
+        url += `&code=${code}&grant_type=authorization_code&redirect_uri=${redirect || 'https://www.openchat.dev/auth/twitch'}`;
+        let tokens = await this.fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/vnd.twitchtv.v3+json' } });
+        //Logger("Tokens:", tokens);
+
+        if(tokens?.access_token && tokens?.refresh_token) {
+            return await this.twitchTokenAuth(user, tokens);
+        }
+    }
+
+    async twitchTokenAuth(user, tokens) {
+        Logger("Twitch Token Auth", user, tokens);
+        if(typeof(tokens) === 'string') {
+            try { tokens = JSON.parse(this._decryptToken(tokens)); } catch(err) { Logger("ECE:", err); }
+        }
+
+        if(typeof(tokens) !== 'object') {
+            return new Error("Tokens was not of type 'Object'.");
+        }
+
+        let twitch_data = await this._validateAndRefreshTwitchToken(tokens);
+        Logger("Twitch Data:", twitch_data);
+        // User Twitch Data to Sync/Create User. Return User or Error.
+    }
+
     async associateTwitchUser(user_id, user_data) {
         let twitch_data = {
             id: user_data.twitch_id,
@@ -853,48 +912,130 @@ class AuthServer {
         return true;
     }
 
-    async getUserChannelRoles(user_id) {
-        let result = await this.selectQueryParse(['uuid'], [user_id], 'channel_roles');
-
-        let data = {};
-        if(result instanceof Error || result.rowCount == 0)
-            return data;
-
-        for(let i = 0; i < result.rows.length; i++) {
-            data[result.rows[i].channel_id] = result.rows[i].roles;
+    async _syncTwitchUser(access_token, twitch_data, user) {
+        if(!(user instanceof User)) {
+            return Error("_syncTwitchUser requires user that is type of 'User'.");
         }
+
+        let data = await this._getTwitchUser(access_token, twitch_data);
+        let output = await this.associateTwitchUser(user.getDetails().uuid.getValue(), data);
+        if(output instanceof Error)
+            return output;
+
+        user.setChannels(data.subs);
+        user.setConnections({ twitch: { id: data.twitch_id, login: data.twitch_login } });
+        //Logger("Synced User:", user.toJSON());
+
+        return user;
+    }
+
+    async _getTwitchUser(access_token, twitch_user) {
+        let data = {}, channels = await this.getAllChannels();
+        if(channels instanceof Error)
+            channels = [];
+
+        // #region Subs
+        let promises = [];
+        for(let i = 0; i < channels.length; i++) {
+            let url = `https://api.twitch.tv/helix/subscriptions/user?broadcaster_id=`;
+            url += `${channels[i].getDetails().twitch.id}&user_id=${twitch_user.user_id}`;
+            promises.push({p: new Promise((res, rej) => {
+                https.get(url, {
+                    headers: {
+                        'Authorization': `Bearer ${access_token}`,
+                        'Client-Id': `${this.getConfig()?.twitch?.id}`
+                    }
+                }, (response) => {
+                    this.jsonBodyParse(response, res);
+                });
+            }), id: channels[i].getDetails().id});
+        }
+
+        let subs = {};
+        for(let i = 0; i < promises.length; i++) {
+            let output = await promises[i].p;
+            if(output.status == 200 || Array.isArray(output.data)) {
+                let tier = output.data[0].tier;
+                let data = {
+                    channel_id: promises[i].id,
+                    roles: tier == "1000" ? ChannelRoles.Sub1 : tier == "2000" ?
+                        ChannelRoles.Sub2 : tier == "3000" ? ChannelRoles.Sub3 : 0
+                }
+
+                subs[data.channel_id] = data.roles;
+            }
+        }
+
+        data.subs = subs;
+        // #endregion
+
+        // #region User
+        data.twitch_id = twitch_data.user_id;
+        data.twitch_login = twitch_data.login;
+        // #endregion
 
         return data;
     }
 
-    async getUserConnections(user_id) {
-        let result = await this.selectQueryParse(['uuid'], [user_id], 'user_connections');
-
-        let data = {};
-        if(result instanceof Error || result.rowCount == 0)
-            return data;
-
-        data.twitch = {
-            id: result.rows[0].twitch_id,
-            login: result.rows[0].twitch_login
+    async _validateAndRefreshTwitchToken(token_data) {
+        let output = await this._validateTwitchToken(token_data);
+        //Logger("Validated Twitch Response", output);
+        if(output instanceof Error) {
+            return output;
+        } else if(output.status != undefined && output.status != 200) {
+            output = await this._refreshTwitchToken(token_data);
+            if(output instanceof Error) {
+                return output;
+            } else {
+                return await this._validateAndRefreshTwitchToken(output);
+            }
         }
 
-        return data;
+        return output;
     }
 
-    async twitchCodeAuth(user, code, redirect) {
-        Logger("Twitch Code Auth", user, code, redirect);
-        if(code === 'missing')
-            return Error("Did not find twitch code.");
+    async _validateTwitchToken(token_data) {
+        let output = await this.fetch('https://id.twitch.tv/oauth2/validate', {
+            headers: { 'Authorization': `Bearer ${token_data.access_token}` }
+        });
 
-        let url = `https://id.twitch.tv/oauth2/token?client_id=${this.getConfig().twitch.id}&client_secret=${this.getConfig().twitch.secret}`;
-        url += `&code=${code}&grant_type=authorization_code&redirect_uri=${redirect || 'https://www.openchat.dev/auth/twitch'}`;
-        let tokens = await this.fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/vnd.twitchtv.v3+json' } });
-        Logger("Tokens:", tokens);
+        return output;
     }
 
-    async twitchTokenAuth(user, tokens) {
-        Logger("Twitch Token Auth", user, tokens);
+    async _refreshTwitchToken(token_data) {
+        let url = `https://id.twitch.tv/oauth2/token?grant_type=refresh_token&refresh_token=${token_data.refresh_token}`;
+        url += `&client_id=${this.getConfig()?.twitch?.id}&client_secret=${this.getConfig()?.twitch?.secret}`;
+        let output = await this.fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/vnd.twitchtv.v3+json' }
+        });
+
+        return output;
+    }
+
+    _getEncryptCipher(cipher = true) {
+        let algo = "aes-256-cbc";
+        let key = Buffer.from(this.getConfig()?.encrypt?.secret, "base64");
+        let buf = Buffer.from(this.getConfig()?.encrypt?.init, 'base64');
+        if(cipher) {
+            return Crypto.createCipheriv(algo, key, buf);
+        } else {
+            return Crypto.createDecipheriv(algo, key, buf);
+        }
+    }
+
+    _encryptToken(token) {
+        let cipher = this._getEncryptCipher(true);
+        let ed = cipher.update(token, "utf-8", "base64");
+        ed += cipher.final("base64");
+        return ed;
+    }
+
+    _decryptToken(token) {
+        let decipher = this._getEncryptCipher(false);
+        let dd = decipher.update(token, "base64", "utf-8");
+        dd += decipher.final("utf-8");
+        return dd;
     }
 
     // User Tokens
