@@ -567,7 +567,7 @@ class AuthServer {
         return {
             secure: options?.secure ?? this.getConfig()?.app?.env === 'production', 
             httpOnly: true, 
-            domain: options?.domain ?? this.getConfig()?.app?.env === 'production' ? 'openchat.dev' : undefined
+            domain: options?.domain ?? this.getConfig()?.app?.env === 'production' ? 'https://www.openchat.dev' : undefined
         }
     }
 
