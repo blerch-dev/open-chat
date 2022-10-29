@@ -275,7 +275,6 @@ class OpenChatApp {
                 }
             }
 
-            Logger("req.query:", req.query);
             if(req.query.twitch_code != undefined) {
                 this.getAuth().twitchCodeAuth(req.query.twitch_code, redirect, setCookie).then(func);
             } else {
