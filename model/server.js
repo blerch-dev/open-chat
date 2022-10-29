@@ -608,6 +608,7 @@ class AuthServer {
                     let hash = await HashValue(password, user.getSecurity().salt);
                     if(hash?.hash === user.getSecurity().hash) {
                         authed = true;
+                        Logger("Authing with Creds");
                     } else {
                         user = null;
                     }
@@ -668,6 +669,7 @@ class AuthServer {
                         user = null;
                     } else {
                         user = result;
+                        Logger("Authing with Token");
                     }
                 }
             }
@@ -689,6 +691,7 @@ class AuthServer {
                 errors.push(user);
             } else {
                 authed = true;
+                Logger("Authing with Twitch");
             }
 
             //Logger(`Authed: ${authed}`);
