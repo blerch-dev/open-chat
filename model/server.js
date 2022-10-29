@@ -851,7 +851,7 @@ class AuthServer {
     }
 
     async twitchCodeAuth(code, redirect, setCookie) {
-        //Logger("Twitch Code Auth", user, code, redirect);
+        Logger("Twitch Code Auth", user, code, redirect);
         if(code === 'missing')
             return Error("Did not find twitch code.");
 
@@ -863,7 +863,7 @@ class AuthServer {
     }
 
     async twitchTokenAuth(tokens, setCookie) {
-        //Logger("Twitch Token Auth", user, tokens);
+        Logger("Twitch Token Auth", user, tokens);
         if(typeof(tokens) === 'string') {
             try { tokens = JSON.parse(this._decryptToken(tokens)); } catch(err) { Logger("ECE:", err); }
         }
