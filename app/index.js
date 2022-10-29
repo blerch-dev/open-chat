@@ -259,7 +259,7 @@ class OpenChatApp {
         app.post('/auth/twitch', (req, res, next) => {
             let redirect = req.protocol + '://' + req.get('host') + '/auth/twitch';
             let setCookie = (new_tokens) => { res.cookie('twitch_tokens', new_tokens, this.getAuth().cookieOptions()); }
-            this.getAuth().twitchCodeAuth(req.query.twitch_code, redirect, setCookie).then((output) => {
+            let func = (output) => {
                 //Logger("Twitch Auth Output:", output);
                 if(output instanceof User) {
                     req.session.user = output.toJSON();
@@ -269,7 +269,13 @@ class OpenChatApp {
                 } else {
                     res.json({ Error: { name: "Undefined Error", message: "Try Again Later." } });
                 }
-            });
+            }
+
+            if(req.query.indexOf('twitch_code') >= 0) {
+                this.getAuth().twitchCodeAuth(req.query.twitch_code, redirect, setCookie).then(func);
+            } else {
+                this.getAuth().twitchTokenAuth(req.cookies.twitch_tokens, setCookie);
+            }
         });
 
         app.get('/auth/twitch', (req, res, next) => {
