@@ -72,6 +72,7 @@ class ChatClient {
                     return e.preventDefault();
 
                 if(e.code === "Enter" || e.code === "KeypadEnter") {
+                    console.log("Message Value:", e.target.value);
                     if(e.target.value !== "") {
                         this.sendMessage(e.target.value);
                     }
