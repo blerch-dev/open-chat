@@ -679,7 +679,7 @@ class AuthServer {
 
         // Twitch
         if(!authed) {
-            //Logger('Twitch:', twitch_tokens, twitch_code);
+            Logger('Twitch:', twitch_tokens, twitch_code);
             let setToken = (new_token) => { res.cookie('twitch_tokens', new_token, this.cookieOptions()); }
             if(typeof(twitch_tokens) === 'string') {
                 user = await this.twitchTokenAuth(twitch_tokens, setToken);
@@ -691,7 +691,7 @@ class AuthServer {
                 errors.push(user);
             } else {
                 authed = true;
-                Logger("Authing with Twitch");
+                Logger("Authing with Twitch", user);
             }
 
             //Logger(`Authed: ${authed}`);
