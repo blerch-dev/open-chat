@@ -258,7 +258,7 @@ class OpenChatApp {
 
         // Twitch
         app.post('/auth/twitch', (req, res, next) => {
-            let redirect = req.protocol + '://' + req.get('host') + '/auth/twitch';
+            let redirect = this.getConfig()?.app?.env === 'dev' ? 'http://localhost:8000/auth/twitch' : 'https://' + req.get('host') + '/auth/twitch';
             let setCookie = (new_tokens) => { 
                 Logger('Setting Cookie: twitch_token', new_tokens); 
                 res.cookie('twitch_tokens', new_tokens, this.getAuth().cookieOptions()); 
