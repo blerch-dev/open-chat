@@ -625,6 +625,7 @@ class AuthServer {
                     if(token instanceof Error) {
                         errors.push(result)
                     } else if(typeof(result) === 'string') {
+                        Logger("Setting Cookie: token", result);
                         res.cookie('token', result, this.cookieOptions());
                     }
                 }
@@ -657,6 +658,7 @@ class AuthServer {
                             if(result instanceof Error) {
                                 errors.push(result);
                             } else if(typeof(result) === 'string') {
+                                Logger("Setting Cookie: token", result);
                                 res.cookie('token', result, { 
                                     secure: this.getConfig()?.app?.env === 'production', 
                                     httpOnly: true, 
@@ -686,6 +688,7 @@ class AuthServer {
         // Twitch
         if(!authed) {
             //Logger('Twitch:', twitch_tokens, twitch_code);
+            Logger("Setting Cookie: twitch_tokens", new_token);
             let setToken = (new_token) => { res.cookie('twitch_tokens', new_token, this.cookieOptions()); }
             if(typeof(twitch_tokens) === 'string') {
                 user = await this.twitchTokenAuth(twitch_tokens, setToken);

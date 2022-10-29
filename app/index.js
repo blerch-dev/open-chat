@@ -258,7 +258,10 @@ class OpenChatApp {
         // Twitch
         app.post('/auth/twitch', (req, res, next) => {
             let redirect = req.protocol + '://' + req.get('host') + '/auth/twitch';
-            let setCookie = (new_tokens) => { res.cookie('twitch_tokens', new_tokens, this.getAuth().cookieOptions()); }
+            let setCookie = (new_tokens) => { 
+                Logger('Setting Cookie: twitch_token', new_tokens); 
+                res.cookie('twitch_tokens', new_tokens, this.getAuth().cookieOptions()); 
+            }
             let func = (output) => {
                 Logger("Twitch Auth Output:", output);
                 if(output instanceof User) {

@@ -5,7 +5,7 @@ const config = require('../config/config.json');
 const LogConfig = {
     trace_stake: false,
     log_to_file: false,
-    no_log: config?.app?.env === 'production',
+    no_log: config?.debug ?? config?.app?.env === 'production' ?? false,
     prefix: null,
 }
 
