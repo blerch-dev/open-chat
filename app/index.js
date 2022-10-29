@@ -125,7 +125,7 @@ class OpenChatApp {
             if(this.getConfig()?.app?.env !== 'production')
                 return next();
 
-            Logger('Setting Cross Domain Credentials', req.headers.origin);
+            //Logger('Setting Cross Domain Credentials', req.headers.origin);
             res.header('Access-Control-Allow-Credentials', true);
             res.header('Access-Control-Allow-Origin', 'https://www.openchat.dev');
             res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');

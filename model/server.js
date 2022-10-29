@@ -614,7 +614,7 @@ class AuthServer {
                     let hash = await HashValue(password, user.getSecurity().salt);
                     if(hash?.hash === user.getSecurity().hash) {
                         authed = true;
-                        Logger("Authing with Creds");
+                        //Logger("Authing with Creds");
                     } else {
                         user = null;
                     }
@@ -625,7 +625,7 @@ class AuthServer {
                     if(token instanceof Error) {
                         errors.push(result)
                     } else if(typeof(result) === 'string') {
-                        Logger("Setting Cookie: token", result);
+                        //Logger("Setting Cookie: token", result);
                         res.cookie('token', result, this.cookieOptions());
                     }
                 }
@@ -658,7 +658,7 @@ class AuthServer {
                             if(result instanceof Error) {
                                 errors.push(result);
                             } else if(typeof(result) === 'string') {
-                                Logger("Setting Cookie: token", result);
+                                //Logger("Setting Cookie: token", result);
                                 res.cookie('token', result, { 
                                     secure: this.getConfig()?.app?.env === 'production', 
                                     httpOnly: true, 
@@ -689,7 +689,7 @@ class AuthServer {
         if(!authed) {
             //Logger('Twitch:', twitch_tokens, twitch_code);
             let setToken = (new_token) => {
-                Logger("Setting Cookie: twitch_tokens", new_token); 
+                //Logger("Setting Cookie: twitch_tokens", new_token); 
                 res.cookie('twitch_tokens', new_token, this.cookieOptions()); 
             }
             
@@ -703,7 +703,7 @@ class AuthServer {
                 errors.push(user);
             } else {
                 authed = true;
-                Logger("Authing with Twitch", user);
+                //Logger("Authing with Twitch", user);
             }
 
             //Logger(`Authed: ${authed}`);
@@ -880,7 +880,7 @@ class AuthServer {
 
         setCookie(this._encryptToken(JSON.stringify(token_data)));
         let con_user = await this.getUserFromTwitch(twitch_data?.user_id);
-        Logger("Twitch Data:", twitch_data, con_user);
+        //Logger("Twitch Data:", twitch_data, con_user);
         if(con_user instanceof User) {
             return await this._syncTwitchUser(tokens.access_token, twitch_data, con_user);
         } else {
