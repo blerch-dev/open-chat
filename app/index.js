@@ -47,7 +47,7 @@ class OpenChatApp {
                 secure: false,
                 httpOnly: true,
                 path: '/',
-                domain: config?.app?.env === 'dev' ? 'localhost' : 'openchat.dev',
+                //domain: config?.app?.env === 'dev' ? 'localhost' : 'openchat.dev',
                 maxAge: (1000 * 60 * 60 * 24) * 0.5 // Days
             }
         })
@@ -258,11 +258,11 @@ class OpenChatApp {
         app.post('/auth/twitch', (req, res, next) => {
             let redirect = this.getConfig()?.app?.env === 'dev' ? 'http://localhost:8000/auth/twitch' : 'https://' + req.get('host') + '/auth/twitch';
             let setCookie = (new_tokens) => { 
-                Logger('Cookie Options:', this.getAuth().cookieOptions()); 
+                //Logger('Cookie Options:', this.getAuth().cookieOptions()); 
                 res.cookie('twitch_tokens', new_tokens, this.getAuth().cookieOptions()); 
             }
             let func = (output) => {
-                Logger("Twitch Auth Output:", output);
+                //Logger("Twitch Auth Output:", output);
                 if(output instanceof User) {
                     req.session.user = output.toJSON();
                     res.json({ Okay: true, Auth: true });

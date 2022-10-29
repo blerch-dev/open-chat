@@ -881,11 +881,11 @@ class AuthServer {
         //Logger("Twitch Data:", twitch_data, con_user);
         if(con_user instanceof User) {
             let authed_user = await this._syncTwitchUser(tokens.access_token, twitch_data, con_user);
-            Logger("Twitch Authed User:", authed_user);
+            //Logger("Twitch Authed User:", authed_user);
             return authed_user;
         } else {
             let authed_user = await this._createUserFromTwitchUser(tokens.access_token, twitch_data);
-            Logger("Twitch Authed User:", authed_user);
+            //Logger("Twitch Authed User:", authed_user);
             return authed_user;
         }
     }
