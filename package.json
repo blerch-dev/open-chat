@@ -8,7 +8,7 @@
     "start": "node .",
     "watch": "pm2 start index.js --watch",
     "scripts": "node ./dev/scripts.js",
-    "sync": "git add . && git commit -m \"Working Changes\" && git push origin master:simple && git push shared master:main && ssh root@45.79.5.161;"
+    "sync": "git add . && git commit -m \"Working Changes\" && git push origin master:simple && git push shared master:main && ssh root@45.79.5.161"
   },
   "author": "blerch-dev",
   "license": "ISC",
