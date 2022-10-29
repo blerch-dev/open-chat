@@ -156,13 +156,21 @@ class OpenChatApp {
 
     configRoutes(app) {
         app.all('*', (req, res, next) => {
-            //Logger("Session Data:", req.session);
             let usr = req.session?.user ?? undefined;
-            if(usr != undefined) {
-                this.setOption('user', usr);
+            this.setOption('user', usr);
+
+            let route = this.getRoute(req.hostname);
+            //Logger('Route:', route);
+            if(route instanceof Route) {
+                (route.getRouter(this.getOptions, this.setOption, this.getAuth()))(req, res, next);
+            } else {
                 return next();
             }
+        });
 
+        this.authCatches(app);
+
+        app.all('*', (req, res, next) => {
             this.getAuth().AuthUser(req, res).then((usr) => {
                 if(usr instanceof User) {
                     usr = usr.toJSON();
@@ -174,16 +182,6 @@ class OpenChatApp {
                     return next();
                 }
             });
-        });
-
-        app.all('*', (req, res, next) => {
-            let route = this.getRoute(req.hostname);
-            //Logger('Route:', route);
-            if(route instanceof Route) {
-                (route.getRouter(this.getOptions, this.setOption, this.getAuth()))(req, res, next);
-            } else {
-                return next();
-            }
         });
 
         this.chatCatches(app);
@@ -255,14 +253,7 @@ class OpenChatApp {
         });
     }
 
-    genericCatches(app) {
-
-        // Live
-        app.get('/live', (req, res, next) => {
-            res.render('generic/live', this.getOptions());
-        });
-
-        //// Auth
+    authCatches(app) {
 
         // Twitch
         app.post('/auth/twitch', (req, res, next) => {
@@ -322,6 +313,14 @@ class OpenChatApp {
                     res.json({ Okay: false, Signup: false, Error: { message: "Bad Signup Attempt." } });
                 }
             });
+        });
+    }
+
+    genericCatches(app) {
+
+        // Live
+        app.get('/live', (req, res, next) => {
+            res.render('generic/live', this.getOptions());
         });
 
         // Generic Pages
