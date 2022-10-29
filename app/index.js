@@ -268,7 +268,7 @@ class OpenChatApp {
         app.post('/auth/twitch', (req, res, next) => {
             let redirect = req.protocol + '://' + req.get('host') + '/auth/twitch';
             let setCookie = (new_tokens) => { res.cookie('twitch_tokens', new_tokens, this.getAuth().cookieOptions()); }
-            this.getAuth().twitchCodeAuth(req.query.code, redirect, setCookie).then((output) => {
+            this.getAuth().twitchCodeAuth(req.query.twitch_code, redirect, setCookie).then((output) => {
                 //Logger("Twitch Auth Output:", output);
                 if(output instanceof User) {
                     req.session.user = output.toJSON();
@@ -283,7 +283,7 @@ class OpenChatApp {
 
         app.get('/auth/twitch', (req, res, next) => {
             //Logger("Cookies:", req.cookies);
-            this.setOption('fetchCode', req.cookies?.twitch === undefined);
+            this.setOption('fetchCode', req.cookies?.twitch_tokens === undefined);
             res.render('generic/oauth', this.getOptions());
         });
 
