@@ -859,10 +859,7 @@ class AuthServer {
         url += `&code=${code}&grant_type=authorization_code&redirect_uri=${redirect || 'https://www.openchat.dev/auth/twitch'}`;
         let tokens = await this.fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/vnd.twitchtv.v3+json' } });
         //Logger("Tokens:", tokens);
-
-        if(tokens?.access_token && tokens?.refresh_token) {
-            return await this.twitchTokenAuth(tokens, setCookie);
-        }
+        return await this.twitchTokenAuth(tokens, setCookie);
     }
 
     async twitchTokenAuth(tokens, setCookie) {
@@ -872,6 +869,7 @@ class AuthServer {
         }
 
         if(typeof(tokens) !== 'object') {
+            Logger("Tokens:", tokens);
             return new Error("Tokens was not of type 'Object'.");
         }
 
