@@ -38,11 +38,7 @@
                         setTimeout(() => {
                             window.location.href = '/profile';
                         }, 1500);
-                    } else {
-                        let elem = document.createElement('label');
-                        elem.textContent = 'Error on auth. Try again later.';
-                        document.getElementById('auth_output').appendChild(elem);
-                        
+                    } else {         
                         elem = document.createElement('pre');
                         elem.textContent = `${output.Error?.name ? `${output.Error?.name}: ` : ''}${output.Error?.message || 'Undefined Error'}`;
                         document.getElementById('auth_output').appendChild(elem);

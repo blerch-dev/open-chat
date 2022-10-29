@@ -685,7 +685,7 @@ class AuthServer {
 
         // Twitch
         if(!authed) {
-            Logger('Twitch:', twitch_tokens, twitch_code);
+            //Logger('Twitch:', twitch_tokens, twitch_code);
             let setToken = (new_token) => { res.cookie('twitch_tokens', new_token, this.cookieOptions()); }
             if(typeof(twitch_tokens) === 'string') {
                 user = await this.twitchTokenAuth(twitch_tokens, setToken);
@@ -874,7 +874,7 @@ class AuthServer {
 
         setCookie(this._encryptToken(JSON.stringify(token_data)));
         let con_user = await this.getUserFromTwitch(twitch_data?.user_id);
-        //Logger("Twitch Data:", twitch_data, con_user);
+        Logger("Twitch Data:", twitch_data, con_user);
         if(con_user instanceof User) {
             return await this._syncTwitchUser(tokens.access_token, twitch_data, con_user);
         } else {
