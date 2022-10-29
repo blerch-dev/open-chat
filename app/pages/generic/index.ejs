@@ -8,9 +8,12 @@
     <main>
         <h1>OpenChat</h1>
         <p>Streamers</p>
-        <span>
-            <a href="https://www.kidnotkin.tv">KidNotkin</a>
-        </span>
+        <div class="streamer-list">
+            <a class="centered-group streamer-card" href="https://www.kidnotkin.tv">
+                <img src="/assets/img/kidnotkin.jpg" style="border-radius: 50%; width: 125px;">
+                <h2>KidNotkin</h2>
+            </a>
+        </div>
     </main>
     <style>
         main {
@@ -20,14 +23,25 @@
             align-items: center;
         }
 
-        span {
+        .streamer-list {
+            width: 100%;
+            padding: 15px;
             display: flex;
-            flex-wrap: wrap;
+            flex: 0;
+            justify-content: center;
+            gap: 15px;
         }
 
-        span a {
-            font-size: larger;
-            padding: 5px;
+        .streamer-card {
+            gap: 15px;
+            padding: 20px;
+            background-color: var(--dark-grey);
+            border-radius: 7px;
+            width: fit-content;
+            height: fit-content;
+            flex: 0;
+            border: 2px solid transparent;
+            transition: 0.3s;
         }
     </style>
 </body>

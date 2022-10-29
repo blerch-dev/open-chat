@@ -563,6 +563,14 @@ class AuthServer {
         return channel;
     }
 
+    cookieOptions(options) {
+        return {
+            secure: options?.secure ?? this.getConfig()?.app?.env === 'production', 
+            httpOnly: true, 
+            domain: options?.domain ?? this.getConfig()?.app?.env === 'production' ? 'openchat.dev' : undefined
+        }
+    }
+
     // App Functions
     async Login(req, res) {
         return await this.AuthUser(req, res);
@@ -575,7 +583,7 @@ class AuthServer {
     async AuthUser(req, res) {
         const { token, twitch_tokens } = req.cookies;
         const { username, password, createToken } = req.body;
-        const { twitch_code } = req.query;
+        const { twitch_code, redirect } = req.query;
 
         //Logger('Auth Flow:', "\x1b[2m");
         if(req?.session?.user != undefined) {
@@ -608,13 +616,9 @@ class AuthServer {
                 if(authed && user instanceof User && createToken) {
                     let result = await this.createUserToken(user.getDetails().uuid.getValue());
                     if(token instanceof Error) {
-                        result.push(result)
+                        errors.push(result)
                     } else if(typeof(result) === 'string') {
-                        res.cookie('token', result, { 
-                            secure: this.getConfig()?.app?.env === 'production', 
-                            httpOnly: true, 
-                            domain: this.getConfig()?.app?.env === 'production' ? 'openchat.dev' : req.hostname
-                        });
+                        res.cookie('token', result, this.cookieOptions());
                     }
                 }
             }
@@ -624,7 +628,7 @@ class AuthServer {
 
         // Token
         if(!authed) {
-            Logger('Token:', token);
+            //Logger('Token:', token);
             if(typeof(token) === 'string') {
                 let parts = token.split('-');
                 let found_token = await this.getToken(parts[0]);
@@ -667,28 +671,29 @@ class AuthServer {
                     }
                 }
             }
-            Logger(`Authed: ${authed}`);
-            Logger("Errors:", errors.length > 0 ? errors : "No Errors.");
+            //Logger(`Authed: ${authed}`);
+            //Logger("Errors:", errors.length > 0 ? errors : "No Errors.");
         }
 
         // Twitch
         if(!authed) {
-            Logger('Twitch:', twitch_tokens, twitch_code);
-            let tokens = null;
+            //Logger('Twitch:', twitch_tokens, twitch_code);
+            let setToken = (new_token) => { res.cookie('twitch_tokens', new_token, this.cookieOptions()); }
             if(typeof(twitch_tokens) === 'string') {
-                // decrypt token object
+                user = await this.twitchTokenAuth(twitch_tokens, setToken);
             } else if(typeof(twitch_code) === 'string') {
-                // fetch token object
+                user = await this.twitchCodeAuth(twitch_code, redirect, setToken);
             }
 
-            if(typeof(tokens) === 'object') {
-
+            if(user instanceof Error) {
+                errors.push(user);
+            } else {
+                authed = true;
             }
-            Logger(`Authed: ${authed}`);
-            Logger("Errors:", errors.length > 0 ? errors : "No Errors.");
+
+            //Logger(`Authed: ${authed}`);
+            //Logger("Errors:", errors.length > 0 ? errors : "No Errors.");
         }
-
-        Logger("\x1b[0m");
 
         if(authed && user instanceof User) {
             return user;
@@ -726,8 +731,17 @@ class AuthServer {
 
     async getUserFromToken(token) {}
 
-    async getUserFromTwitch(tokens) {
+    async getUserFromTwitch(twitch_id) {
+        let output = await this.rawQuery('SELECT * FROM user_connections WHERE twitch_id = $1', [twitch_id]);
+        //Logger("guft:", output);
+        if(output.rowCount === 1) {
+            let user = this.getUser({ id: output.rows[0].uuid });
+            return user;
+        } else if(output.rowCount > 1) {
+            return new Error("Multiple Matched Users.");
+        }
 
+        return null;
     }
 
     async createUser(user_data) {
@@ -821,7 +835,7 @@ class AuthServer {
         return data;
     }
 
-    async twitchCodeAuth(user, code, redirect) {
+    async twitchCodeAuth(code, redirect, setCookie) {
         //Logger("Twitch Code Auth", user, code, redirect);
         if(code === 'missing')
             return Error("Did not find twitch code.");
@@ -832,12 +846,12 @@ class AuthServer {
         //Logger("Tokens:", tokens);
 
         if(tokens?.access_token && tokens?.refresh_token) {
-            return await this.twitchTokenAuth(user, tokens);
+            return await this.twitchTokenAuth(tokens, setCookie);
         }
     }
 
-    async twitchTokenAuth(user, tokens) {
-        Logger("Twitch Token Auth", user, tokens);
+    async twitchTokenAuth(tokens, setCookie) {
+        //Logger("Twitch Token Auth", user, tokens);
         if(typeof(tokens) === 'string') {
             try { tokens = JSON.parse(this._decryptToken(tokens)); } catch(err) { Logger("ECE:", err); }
         }
@@ -846,9 +860,17 @@ class AuthServer {
             return new Error("Tokens was not of type 'Object'.");
         }
 
-        let twitch_data = await this._validateAndRefreshTwitchToken(tokens);
-        Logger("Twitch Data:", twitch_data);
-        // User Twitch Data to Sync/Create User. Return User or Error.
+        let { twitch_data, token_data, error } = await this._validateAndRefreshTwitchToken(tokens);
+        if(error instanceof Error) { return error; }
+
+        setCookie(this._encryptToken(JSON.stringify(token_data)));
+        let con_user = await this.getUserFromTwitch(twitch_data?.user_id);
+        //Logger("Twitch Data:", twitch_data, con_user);
+        if(con_user instanceof User) {
+            return await this._syncTwitchUser(tokens.access_token, twitch_data, con_user);
+        } else {
+            return await this._createUserFromTwitchUser(tokens.access_token, twitch_data);
+        }
     }
 
     async associateTwitchUser(user_id, user_data) {
@@ -929,6 +951,29 @@ class AuthServer {
         return user;
     }
 
+    async _createUserFromTwitchUser(access_token, twitch_data) {
+        let data = await this._getTwitchUser(access_token, twitch_data);
+        let user_data = {
+            username: data.twitch_login,
+            uuid: UUID.Generate()
+        }
+
+        let user = await this.createUser(user_data);
+        if(user instanceof Error)
+            return user;
+
+        //Logger("Created User!");
+        let output = await this.associateTwitchUser(user.getDetails().uuid.getValue(), data);
+        if(output instanceof Error)
+            return output;
+
+        user.setChannels(data.subs);
+        user.setConnections({ twitch: { id: data.twitch_id, login: data.twitch_login } });
+        //Logger("Created User:", user.toJSON());
+
+        return user;
+    }
+
     async _getTwitchUser(access_token, twitch_user) {
         let data = {}, channels = await this.getAllChannels();
         if(channels instanceof Error)
@@ -970,8 +1015,8 @@ class AuthServer {
         // #endregion
 
         // #region User
-        data.twitch_id = twitch_data.user_id;
-        data.twitch_login = twitch_data.login;
+        data.twitch_id = twitch_user.user_id;
+        data.twitch_login = twitch_user.login;
         // #endregion
 
         return data;
@@ -981,17 +1026,21 @@ class AuthServer {
         let output = await this._validateTwitchToken(token_data);
         //Logger("Validated Twitch Response", output);
         if(output instanceof Error) {
-            return output;
+            return { error: output };
         } else if(output.status != undefined && output.status != 200) {
             output = await this._refreshTwitchToken(token_data);
             if(output instanceof Error) {
-                return output;
+                return { error: output };
             } else {
                 return await this._validateAndRefreshTwitchToken(output);
             }
         }
 
-        return output;
+
+        return {
+            twitch_data: output,
+            token_data: token_data
+        }
     }
 
     async _validateTwitchToken(token_data) {
@@ -1018,9 +1067,9 @@ class AuthServer {
         let key = Buffer.from(this.getConfig()?.encrypt?.secret, "base64");
         let buf = Buffer.from(this.getConfig()?.encrypt?.init, 'base64');
         if(cipher) {
-            return Crypto.createCipheriv(algo, key, buf);
+            return crypto.createCipheriv(algo, key, buf);
         } else {
-            return Crypto.createDecipheriv(algo, key, buf);
+            return crypto.createDecipheriv(algo, key, buf);
         }
     }
 

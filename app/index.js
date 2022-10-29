@@ -157,8 +157,23 @@ class OpenChatApp {
     configRoutes(app) {
         app.all('*', (req, res, next) => {
             //Logger("Session Data:", req.session);
-            this.setOption('user', req.session?.user);
+            let usr = req.session?.user ?? undefined;
+            if(usr != undefined) {
+                this.setOption('user', usr);
+                return next();
+            }
 
+            this.getAuth().AuthUser(req, res).then((usr) => {
+                if(usr instanceof User) {
+                    usr = usr.toJSON();
+                    req.session.user = usr;
+                    this.setOption('user', usr);
+                    return next();
+                }
+            });
+        });
+
+        app.all('*', (req, res, next) => {
             let route = this.getRoute(req.hostname);
             //Logger('Route:', route);
             if(route instanceof Route) {
@@ -249,7 +264,18 @@ class OpenChatApp {
         // Twitch
         app.post('/auth/twitch', (req, res, next) => {
             let redirect = req.protocol + '://' + req.get('host') + '/auth/twitch';
-            this.getAuth().twitchCodeAuth(this.getOption('user'), req.query.code, redirect);
+            let setCookie = (new_tokens) => { res.cookie('twitch_tokens', new_tokens, this.getAuth().cookieOptions()); }
+            this.getAuth().twitchCodeAuth(req.query.code, redirect, setCookie).then((output) => {
+                //Logger("Twitch Auth Output:", output);
+                if(output instanceof User) {
+                    req.session.user = output.toJSON();
+                    res.json({ Okay: true, Auth: true });
+                } else if(output instanceof Error) {
+                    res.json({ Error: { name: output.name, message: output.message } });
+                } else {
+                    res.json({ Error: { name: "Undefined Error", message: "Try Again Later." } });
+                }
+            });
         });
 
         app.get('/auth/twitch', (req, res, next) => {
