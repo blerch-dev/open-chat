@@ -172,6 +172,10 @@ class OpenChatApp {
         this.authCatches(app);
 
         app.all('*', (req, res, next) => {
+            if(req.session?.user != undefined) {
+                return next();
+            }
+
             this.getAuth().AuthUser(req, res).then((usr) => {
                 if(usr instanceof User) {
                     usr = usr.toJSON();

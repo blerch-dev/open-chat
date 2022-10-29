@@ -323,17 +323,19 @@ class ChatServer {
                 if(data.toString() === 'pong') { socket.alive = true; return; }
 
                 let json = null;
+                try {
+                    json = JSON.parse(data.toString());
+                    //Logger('JSON:', json);
+                } catch(err) { Logger('JSON Parse Error:', err, data.toString()); }
+
                 if(!connected) {
-                    try {
-                        json = JSON.parse(data.toString());
-                        //Logger('JSON:', json);
-                        if(json?.room === 'null' || json?.room == null) {
-                            socket.send(JSON.stringify({ ServerMessage: `No Channel Found for ${json?.room}`}));
-                            return;
-                        } else {
-                            connect_user(json.room);
-                        }
-                    } catch(err) { Logger('JSON Parse Error:', err, data.toString()); }
+                    if(json?.room === 'null' || json?.room == null) {
+                        socket.send(JSON.stringify({ ServerMessage: `No Channel Found for ${json?.room}`}));
+                        return;
+                    } else {
+                        connect_user(json.room);
+                    }
+                    
                     return;
                 }
 
@@ -594,7 +596,7 @@ class AuthServer {
         //Logger('Auth Flow:', "\x1b[2m");
         if(req?.session?.user != undefined) {
             let user = new User(req.session.user, true);
-            Logger('Returning Session User from AuthUser (class generated automatically)', user);
+            //Logger('Returning Session User from AuthUser (class generated automatically)', user);
             return user;
         }
 
