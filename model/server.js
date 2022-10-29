@@ -688,8 +688,11 @@ class AuthServer {
         // Twitch
         if(!authed) {
             //Logger('Twitch:', twitch_tokens, twitch_code);
-            Logger("Setting Cookie: twitch_tokens", new_token);
-            let setToken = (new_token) => { res.cookie('twitch_tokens', new_token, this.cookieOptions()); }
+            let setToken = (new_token) => {
+                Logger("Setting Cookie: twitch_tokens", new_token); 
+                res.cookie('twitch_tokens', new_token, this.cookieOptions()); 
+            }
+            
             if(typeof(twitch_tokens) === 'string') {
                 user = await this.twitchTokenAuth(twitch_tokens, setToken);
             } else if(typeof(twitch_code) === 'string') {
