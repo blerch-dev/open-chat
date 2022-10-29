@@ -169,6 +169,9 @@ class OpenChatApp {
                     req.session.user = usr;
                     this.setOption('user', usr);
                     return next();
+                } else {
+                    this.setOption('user', undefined);
+                    return next();
                 }
             });
         });
