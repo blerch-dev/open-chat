@@ -176,12 +176,10 @@ class OpenChatApp {
                 if(usr instanceof User) {
                     usr = usr.toJSON();
                     req.session.user = usr;
-                    this.setOption('user', usr);
-                    return next();
-                } else {
-                    this.setOption('user', undefined);
-                    return next();
                 }
+
+                this.setOption('user', usr instanceof Error ? undefined : usr);
+                return next();
             });
         });
 
@@ -260,7 +258,7 @@ class OpenChatApp {
         app.post('/auth/twitch', (req, res, next) => {
             let redirect = this.getConfig()?.app?.env === 'dev' ? 'http://localhost:8000/auth/twitch' : 'https://' + req.get('host') + '/auth/twitch';
             let setCookie = (new_tokens) => { 
-                Logger('Setting Cookie: twitch_token', new_tokens); 
+                Logger('Cookie Options:', this.getAuth().cookieOptions()); 
                 res.cookie('twitch_tokens', new_tokens, this.getAuth().cookieOptions()); 
             }
             let func = (output) => {
