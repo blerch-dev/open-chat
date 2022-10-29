@@ -585,6 +585,12 @@ class AuthServer {
         const { username, password, createToken } = req.body;
         const { twitch_code, redirect } = req.query;
 
+        Logger('Cookies:', req.cookies);
+        Logger('---------------------');
+        Logger('Body:', req.body);
+        Logger('---------------------');
+        Logger('Query:', req.query);
+
         //Logger('Auth Flow:', "\x1b[2m");
         if(req?.session?.user != undefined) {
             let user = new User(req.session.user, true);
