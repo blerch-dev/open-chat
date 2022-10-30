@@ -286,6 +286,7 @@ class ChatServer {
     onConnection(socket, req) {
         socket.alive = true;
         let sess = this.getSession();
+        Logger("Chat Connection:", req.pathname);
         sess(req, {}, () => {
             let user = req.session?.user;
             //Logger("User Connection:", user);
@@ -335,7 +336,7 @@ class ChatServer {
                     } else {
                         connect_user(json.room);
                     }
-                    
+
                     return;
                 }
 
@@ -716,7 +717,7 @@ class AuthServer {
             return user;
         } else {
             if(authed && !(user instanceof User))
-                Logger("Authed but no user.", authed, user);
+                Logger("Authed but no user.", req.hostname, req.pathname);
             else
                 Logger("Auth - User", authed, user);
 
