@@ -198,6 +198,9 @@ class OpenChatApp {
 
         // Chat Pages/JSON
         app.get('/chat/embed', (req, res) => {
+            if(this.getConfig()?.app?.env === 'dev')
+                this.setOption('chatroom', 'kidnotkin');
+
             this.setOption('flex', true);
             this.setOption('includeHeader', false);
             this.setOption('noBackground', true);
@@ -206,7 +209,10 @@ class OpenChatApp {
             res.render('generic/chat', this.getOptions());
         });
 
-        app.get(['/chat/embed', '/chat*'], (req, res) => {
+        app.get(['/chat', '/chat*'], (req, res) => {
+            if(this.getConfig()?.app?.env === 'dev')
+                this.setOption('chatroom', 'kidnotkin');
+
             this.setOption('flex', true);
             this.setOption('includeChatHeader', true);
             this.setOption('includeChatSender', true);

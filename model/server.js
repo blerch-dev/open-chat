@@ -235,6 +235,8 @@ class ChatServer {
         this.setChannel = (label, value) => { Channels[label] = value; }
         this.getChannel = (label) => { return Channels[label]; }
         this.getAllChannels = () => { return Channels; }
+
+        this.matchClientID = (id) => { return id === 'test-bot' };
     }
 
     async start(srv) {
@@ -286,7 +288,20 @@ class ChatServer {
     onConnection(socket, req) {
         socket.alive = true;
         let sess = this.getSession();
-        Logger("Chat Connection:", req.pathname);
+        //Logger("Chat Connection:", req.url);
+        let con_param = req.url.split('?'), con_options = {};
+        if(con_param.length > 1) {
+            let args = con_param[1].split('&');
+            for(let i = 0; i < args.length; i++) {
+                let parts = args[i].split('=');
+                con_options[parts[0]] = parts[1];
+            }
+        }
+
+        if(this.matchClientID(con_options?.client_id)) {
+            return this.onBotConnection(socket, req, con_param);
+        }
+
         sess(req, {}, () => {
             let user = req.session?.user;
             //Logger("User Connection:", user);
@@ -331,13 +346,13 @@ class ChatServer {
 
                 if(!connected) {
                     if(json?.room === 'null' || json?.room == null) {
+                        Logger(`No Channel Found for ${json?.room}`, json);
                         socket.send(JSON.stringify({ ServerMessage: `No Channel Found for ${json?.room}`}));
                         return;
                     } else {
                         connect_user(json.room);
+                        return;
                     }
-
-                    return;
                 }
 
                 if(user?.id == undefined || this.isMuted(user, channel_id) || this.isBanned(user, channel_id))
@@ -354,6 +369,32 @@ class ChatServer {
         });
     }
 
+    onBotConnection(socket, req, params) {
+        let channel_id = null;
+
+        socket.on('message', (data) => {
+            //Logger("Message:", data.toString());
+            if(data.toString() === 'pong') { socket.alive = true; return; }
+
+            let json = null;
+            try {
+                json = JSON.parse(data.toString());
+            } catch(err) { Logger('JSON Parse Error:', err, data.toString()); }
+
+            channel_id = json?.room ?? channel_id;
+            if(json.msg == undefined) {
+                return;
+            }
+
+            Logger("Sending Bot Message", channel_id);
+            this.onMessage(socket, { username: json.username }, channel_id ?? 'undefined', json);
+        });
+
+        socket.on('close', (...args) => { Logger("Closed Both Connection:", params.client_id) });
+
+        socket.send(JSON.stringify({ ServerRequest: 'room_id' }));
+    }
+
     onMessage(socket, user, channel_id, data) {
         Logger(user?.username ?? 'anon', ':', channel_id, '->', data);
         if(data == null) {
@@ -361,11 +402,17 @@ class ChatServer {
             return;
         }
 
-        let msg = JSON.stringify({
+        let json = {
             user: user,
             channel: channel_id,
-            message: data?.msg
-        });
+            message: data?.msg ?? data?.message ?? undefined,
+        };
+
+        if(data?.service != undefined) {
+            json.service = data.service
+        }
+
+        let msg = JSON.stringify(json);
 
         // Redis Publish/Local Publish
         if(this.getConfig()?.chat?.local_publish ?? true) {
@@ -389,7 +436,7 @@ class ChatServer {
         json.user = {
             username: json?.user?.username ?? 'undefined',
             roles: json?.user?.roles ?? 0,
-            channel_roles: json?.user?.channels[json?.channel ?? '_generic_profile'],
+            channel_roles: json?.user?.channels?.[json?.channel ?? '_generic_profile'],
             connections: json?.user?.connections
         }
 
@@ -717,7 +764,7 @@ class AuthServer {
             return user;
         } else {
             if(authed && !(user instanceof User))
-                Logger("Authed but no user.", req.hostname, req.pathname);
+                Logger("Authed but no user.", req.host, req.path, req.url);
             else
                 Logger("Auth - User", authed, user);
 

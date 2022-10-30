@@ -41,7 +41,7 @@ class ChatClient {
         }
         this.getChannel = () => { return Channel }
 
-        this.setRoom = (str) => { Room = str; }
+        this.setRoom = (str) => { console.log('Room:', str); Room = str; }
         this.getRoom = () => { return Room; }
 
         this.getChatElements = () => { return ChatElem; }
@@ -95,14 +95,22 @@ class ChatClient {
         //this.createMessageElement(this.getUser(), message); // Frontend Writes, Requires Filtering Outgoing Messages
     }
 
-    createMessageElement(user, message, pre_elem = undefined) {
+    createMessageElement(data, pre_elem = undefined) {
+        const { user, message, service } = data;
+
         if(pre_elem instanceof Element) {
             this.getChatElements().textField?.appendChild(pre_elem);
             return;
         }
 
+        if(message == undefined || user.username == undefined) {
+            // Bad Format (sometimes chat bot will publish uncaught state updates)
+            return;
+        }
+
         let message_elem = document.createElement('p');
-        message_elem.classList.add('chat-message', this.getSetting('NoBackground') ? 'embed' : null);
+        let classes = ['chat-message', this.getSetting('NoBackground') ? 'embed' : undefined, service];
+        message_elem.classList.add(...classes.filter((e) => { return e != undefined }));
         if(this.getSetting('SeperateBacking') && !this.getSetting('NoBackground'))
             message_elem.classList.add(this.getIdOdd() ? 'chat-message-odd' : 'chat-message-even')
             
@@ -179,7 +187,7 @@ class ChatClient {
         let elem = document.createElement('p');
         elem.classList.add('server-message');
         elem.textContent = data.ServerMessage;
-        this.createMessageElement(null, null, elem);
+        this.createMessageElement(null, elem);
     }
 
     async serverUpdate(data) {
@@ -196,16 +204,26 @@ class ChatClient {
     }
 
     async serverRequest(data) {
-        switch(data.ServerRequest) {
-            case 'room_id':
-                this.getSocket().send(JSON.stringify({ room: this.getRoom() })); break;
-            default:
-                console.log('No Request Case:', data); break;
+        let args = data.ServerRequest;
+        if(!Array.isArray(args)) {
+            args = [args];
         }
+
+        let json = {};
+        for(let i = 0; i < args.length; i++) {
+            switch(args[i]) {
+                case 'room_id':
+                    json.room = this.getRoom(); break;
+                default:
+                    console.log('No Request Case:', args[i]); break;
+            }
+        }
+
+        this.getSocket().send(JSON.stringify(json));
     }
 
     async chatMessage(data) {
         // User (details only no type) - Parse into below object, drop if missing required fields.
-        this.createMessageElement(data.ChatMessage.user, data.ChatMessage.message);
+        this.createMessageElement(data.ChatMessage);
     }
 }

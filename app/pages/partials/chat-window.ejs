@@ -1,9 +1,9 @@
 <script type="module" src="/js/chat.js"></script>
 <link rel='stylesheet' href='/css/chat.css'>
 <% if(locals.flex ?? false) { %>
-<div id="chat-window" style="flex: 1;">
+<div id="chat-window" data-chatroom="<%= locals.chatroom ?? 'undefined' %>" style="flex: 1;">
 <% } else { %>
-<div id="chat-window" data-chatroom="<%= locals.chatroom ?? 'null' %>">
+<div id="chat-window" data-chatroom="<%= locals.chatroom ?? 'undefined' %>">
 <% } %>
     <% if(locals.includeChatHeader ?? true) { %>
         <div id="chat-controls">
