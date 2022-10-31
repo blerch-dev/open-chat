@@ -35,11 +35,9 @@ const KidRoute = new Route('kidnotkin.tv', (router, getAll, set, db) => {
             db.getChannel({ channel_id: 'kidnotkin' }).then((output) => {
                 channel_data = output;
                 func(output);
-                return next();
             });
         } else {
             func(channel_data);
-            return next();
         }
     });
 
