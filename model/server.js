@@ -386,7 +386,7 @@ class ChatServer {
                 return;
             }
 
-            Logger("Sending Bot Message", channel_id);
+            //Logger("Sending Bot Message", channel_id);
             this.onMessage(socket, { username: json.username }, channel_id ?? 'undefined', json);
         });
 
@@ -396,7 +396,7 @@ class ChatServer {
     }
 
     onMessage(socket, user, channel_id, data) {
-        Logger(user?.username ?? 'anon', ':', channel_id, '->', data);
+        //Logger(user?.username ?? 'anon', ':', channel_id, '->', data);
         if(data == null) {
             socket.send(JSON.stringify({ ServerMessage: 'Failed to parse message.' }));
             return;

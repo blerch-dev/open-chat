@@ -147,8 +147,9 @@ class OpenChatApp {
             if(req.path.substring(req.path.length - 1) === '/' && req.path.length > 1) {
                 const query = req.url.slice(req.path.length);
                 const safepath = req.path.slice(0, -1).replace(/\/+/g, '/');
-                res.headers['OpenChat_Host'] = req?.headers?.host || 'openchat.dev';
+                //res.headers['OpenChat_Host'] = req?.headers?.host || 'openchat.dev';
                 res.redirect(301, safepath + query);
+                return;
             }
     
             return next();
