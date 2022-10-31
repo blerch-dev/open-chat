@@ -1,3 +1,5 @@
+// Button to jump to bottom of chat on scroll up
+
 // Chat Client Logic
 document.addEventListener('DOMContentLoaded', () => {
     let client = new ChatClient();
@@ -12,13 +14,18 @@ class ChatClient {
             SeperateBacking: true,
             NoBackground: window.location.pathname.indexOf('/embed') >= 0, // can have options overide
             ChatPlaceholder: 'Message...',
-            ChatTitle: ''
+            ChatTitle: '',
+            MaxElements: 200,
+            ScrollOnNew: undefined, // true for always, false for never, undefined for at bottom
+            ScrollSensitivity: 95
         }
 
         var Socket = null;
         var User = null;
         var Channel = null;
         var Room = null;
+
+        var ChatList = [];
 
         this.setSocket = (socket) => {
             if(socket instanceof WebSocket) {
@@ -54,15 +61,29 @@ class ChatClient {
 
         var isOdd = false;
         this.getIdOdd = () => { isOdd = !isOdd; return isOdd; }
+
+        this.addElem = (elem) => {
+            if(ChatList.length >= (Settings.MaxElements ?? 200)) {
+                let td = ChatList.splice(0, ChatList.length - (Settings.MaxElements ?? 200));
+                for(let i = 0; i < td.length; i++) {
+                    if(td[i] instanceof Element)
+                        td.remove();
+                }
+            }
+
+            ChatList.push(elem);
+        }
     }
 
     connectDom() {
         let domElems = this.getChatElements();
         domElems.inputField = document.getElementById("chat-input-element") || null;
-        domElems.textField = document.getElementById("chat-content") || null;
         domElems.captureList = document.getElementById("capture-list") || null;
         domElems.eventArea = document.getElementById("chat-events") || null;
         domElems.chatTitle = document.getElementById("chat-title") || null;
+        domElems.chatWindow = document.getElementById("chat-window") || null;
+        domElems.chatWrapper = document.getElementById("chat-wrapper") || null;
+        domElems.chatContent = document.getElementById("chat-content") || null;
     }
 
     configListeners() {
@@ -96,13 +117,17 @@ class ChatClient {
     }
 
     createMessageElement(data, pre_elem = undefined) {
-        const { user, message, service } = data;
-
         if(pre_elem instanceof Element) {
-            this.getChatElements().textField?.appendChild(pre_elem);
+            this.getChatElements().chatContent?.appendChild(pre_elem);
             return;
         }
 
+        if(typeof(data) !== 'object') {
+            console.log("Data was not type object.", data);
+            return;
+        }
+
+        const { user, message, service } = data;
         if(message == undefined || user.username == undefined) {
             // Bad Format (sometimes chat bot will publish uncaught state updates)
             return;
@@ -117,8 +142,28 @@ class ChatClient {
         let str = `<span class="user-chat-name" data-ment="${user.username}" style="color: ${user.color || '#fff'};">`;
         str += `${user.username}</span>: ${message}</p>`;
 
+        let e = this.getChatElements().chatWrapper;
+        let _snap = {
+            scrollHeight: e.scrollHeight,
+            scrollTop: e.scrollTop,
+            clientHeight: e.clientHeight
+        }
+
         message_elem.innerHTML = str;
-        this.getChatElements().textField?.appendChild(message_elem);
+        let elem_ref = this.getChatElements().chatContent?.appendChild(message_elem);
+        this.addElem(elem_ref);
+
+        switch(this.getSetting('ScrollOnNew')) {
+            case true:
+                e.scrollTop = e.scrollHeight; break;
+            case undefined:
+                if((_snap.scrollHeight - _snap.scrollTop) - _snap.clientHeight < this.getSetting('ScrollSensitivity') ?? 95) { 
+                    e.scrollTop = e.scrollHeight; 
+                } break;
+            case false:
+            default:
+                break;
+        }
     }
 
     async connect() {

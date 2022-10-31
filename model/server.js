@@ -93,11 +93,11 @@ class ChatServer {
             let sockets = Users[channel_id].get(id);
             if(!Array.isArray(sockets)) {
                 Users[channel_id].set(id, [socket]);
-                Logger('Adding User:', user?.username ?? user?.id, channel_id);
+                //Logger('Adding User:', user?.username ?? user?.id, channel_id);
             } else if(sockets.indexOf(socket) < 0) {
                 sockets.push(socket);
                 Users[channel_id].set(id, sockets);
-                Logger('Adding Socket:', user?.username ?? user?.id, channel_id);
+                //Logger('Adding Socket:', user?.username ?? user?.id, channel_id);
             }
 
             return true;
@@ -115,14 +115,14 @@ class ChatServer {
             for(let i = 0; i < socket.length; i++) {
                 if(!Array.isArray(sockets) || sockets.length <= 1) {
                     Users[channel_id].delete(id);
-                    Logger('Removed User:', user?.username ?? user?.id ?? 'anon', channel_id);
+                    //Logger('Removed User:', user?.username ?? user?.id ?? 'anon', channel_id);
                 } else if(sockets.length > 1) {
                     let socket_ind = sockets.indexOf(socket[i]);
                     //Logger('Socket Splice Index:', socket_ind);
                     if(socket_ind > -1) {
                         sockets.splice(socket_ind, 1);
                         Users[channel_id].set(id, sockets);
-                        Logger('Closed Socket:', user?.username ?? user?.id ?? 'anon', channel_id);
+                        //Logger('Closed Socket:', user?.username ?? user?.id ?? 'anon', channel_id);
                     }
                 }
             }
@@ -764,7 +764,7 @@ class AuthServer {
             return user;
         } else {
             if(authed && !(user instanceof User))
-                Logger("Authed but no user.", req.host, req.path, req.url);
+                Logger("Authed but no user.", req.hostname, req.pathname, req.url);
             else
                 Logger("Auth - User", authed, user);
 
