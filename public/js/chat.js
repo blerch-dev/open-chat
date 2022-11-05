@@ -26,6 +26,7 @@ class ChatClient {
         var Room = null;
 
         var ChatList = [];
+        var ChatFills = { cmds: [], users: [], emotes: [] };
 
         this.setSocket = (socket) => {
             if(socket instanceof WebSocket) {
@@ -73,6 +74,16 @@ class ChatClient {
 
             ChatList.push(elem);
         }
+
+        this.setChatFills = (name, list) => { ChatFills[name] = [...list]; }
+        this.getChatFill = (input) => {
+            let fills = [...ChatFills.cmds, ...ChatFills.users, ...ChatFills.emotes], matches = [];
+            for(let i = 0; i < fills.length; i++) {
+                if(fills[i].toLowerCase().indexOf(input.toLowerCase()) === 0)
+                    matches.push(fills[i]);
+            }
+            return matches;
+        }
     }
 
     connectDom() {
@@ -93,13 +104,19 @@ class ChatClient {
                     return e.preventDefault();
 
                 if(e.code === "Enter" || e.code === "KeypadEnter") {
-                    console.log("Message Value:", e.target.value);
+                    //console.log("Message Value:", e.target.value);
                     if(e.target.value !== "") {
                         this.sendMessage(e.target.value);
                     }
+                } else if(e.code === "Tab") {
+                    this.tabInput(e);
                 }
             }
-        })
+        });
+
+        this.getChatElements().inputField.addEventListener('input', (e) => {
+            this.autoSearch(e);
+        });
     }
 
     configDom() {
@@ -127,10 +144,12 @@ class ChatClient {
             return;
         }
 
-        const { user, message, service } = data;
+        const { user, message, service } = data; let message_str = undefined;
         if(message == undefined || user.username == undefined) {
             // Bad Format (sometimes chat bot will publish uncaught state updates)
             return;
+        } else {
+            message_str = replaceEmotes(message, this.getChannel());
         }
 
         let message_elem = document.createElement('p');
@@ -140,7 +159,7 @@ class ChatClient {
             message_elem.classList.add(this.getIdOdd() ? 'chat-message-odd' : 'chat-message-even')
             
         let str = `<span class="user-chat-name" data-ment="${user.username}" style="color: ${user.color || '#fff'};">`;
-        str += `${user.username}</span>: ${message}</p>`;
+        str += `${user.username}</span>: ${message_str}</p>`;
 
         let e = this.getChatElements().chatWrapper;
         let _snap = {
@@ -168,6 +187,7 @@ class ChatClient {
 
     async connect() {
         this.connectDom();
+        this.setChatFills('emotes', getAllEmotes());
 
         let proc = location.protocol === 'https:' ? 'wss' : 'ws';
         let url = `${proc}://${window.location.host}${window.location.pathname}`;
@@ -270,5 +290,60 @@ class ChatClient {
     async chatMessage(data) {
         // User (details only no type) - Parse into below object, drop if missing required fields.
         this.createMessageElement(data.ChatMessage);
+    }
+
+    inputEventID = null; tabList = []; currentTabIndex = -1;
+    async tabInput(e) {
+        //console.log("TabInput:", e);
+        e.preventDefault();
+        if(this.tabList.length <= this.currentTabIndex + 1) {
+            if(this.tabList.length > 0) {
+                this.currentTabIndex = 0;
+                this.placeFill(this.currentTabIndex);
+            } else {
+                this.currentTabIndex = -1;
+            }
+        } else {
+            this.currentTabIndex += 1;
+            this.placeFill(this.currentTabIndex);
+        }
+    }
+
+    async autoSearch(e) {
+        //console.log("AuthSearch:", e);
+        const func = () => {
+            this.currentTabIndex = -1;
+            [...this.getChatElements().captureList.children].forEach((elem) => { elem.remove(); });
+            if(this.stringify < 0) {
+                this.tabList = [];
+                return;
+            }
+    
+            this.tabList = this.getChatFill(e.target.value);
+            for(let i = 0; i < this.tabList.length; i++) {
+                let elem_click = () => { this.placeFill(i) };
+                let elem = document.createElement('li');
+                elem.textContent = this.tabList[i];
+                elem.onclick = elem_click;
+                this.getChatElements().captureList.appendChild(elem);
+            }
+
+            this.inputEventID = null;
+        }
+
+        if(this.inputEventID != null) {
+            clearTimeout(this.inputEventID);
+        }
+
+        this.inputEventID = setTimeout(func, 25);
+    }
+
+    async placeFill(index) {
+        //console.log("PlaceFill:", index, this.tabList[index]);
+        let value = this.getChatElements().inputField.value.trim();
+        let args = value.split(' ');
+        args.pop();
+        args.push(`${this.tabList[index]} `);
+        this.getChatElements().inputField.value = args.join(' ');
     }
 }

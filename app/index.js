@@ -179,8 +179,9 @@ class OpenChatApp {
 
             this.getAuth().AuthUser(req, res).then((usr) => {
                 if(usr instanceof User) {
-                    usr = usr.toJSON();
-                    req.session.user = usr;
+                    req.session.user = usr.toJSON();
+                } else {
+                    Logger("Failed User Auth:", usr);
                 }
 
                 this.setOption('user', usr instanceof Error ? undefined : usr);
@@ -215,7 +216,7 @@ class OpenChatApp {
                 this.setOption('chatroom', 'kidnotkin');
 
             this.setOption('flex', true);
-            this.setOption('includeChatHeader', true);
+            this.setOption('includeChatHeader', false);
             this.setOption('includeChatSender', true);
             res.render('generic/chat', this.getOptions());
         });
@@ -223,6 +224,18 @@ class OpenChatApp {
     }
 
     developerRoutes(app) {
+        app.get('/admin/full-user', (req, res, next) => {
+            this.getAuth().getUser(req.session?.user).then((output) => {
+                if(output instanceof User) {
+                    Logger('User:', output.getDetails());
+                    res.json(output.getDetails());
+                } else {
+                    Logger('User Output:', output);
+                    res.json(output);
+                }
+            });
+        });
+
         app.get('/api/state', (req, res, next) => {
             let json = {};
             this.getClient().keys('*', (err, keys) => {

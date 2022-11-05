@@ -275,6 +275,7 @@ main.wrapper-main {
     list-style: none;
     cursor: pointer;
     color: var(--white);
+    user-select: none;
     transition: all 0.3s;
 }
 

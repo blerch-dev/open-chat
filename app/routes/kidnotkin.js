@@ -7,6 +7,7 @@ const KidRoute = new Route('kidnotkin.tv', (router, getAll, set, db) => {
     let channel_data = null;
 
     router.get('*', (req, res, next) => {
+        set('header', 'KidNotkin')
         set('tab_name', 'KidNotkin');
         set('header_img', '/assets/img/kidnotkin.jpg');
         set('favicon', {

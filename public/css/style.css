@@ -10,6 +10,7 @@
     --white: #f8f9fa;
 
     --dark-grey-50: #2F343E88;
+    --grey-lighter: #5b6066;
 
     --blue: #3777FF;
     --light-blue: #4983FF;
@@ -450,13 +451,40 @@ span.spacer {
     font-size: 16px;
 }
 
+#profile-sideline {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
 #profile-outline {
+    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 5px;
     padding: 25px;
     padding-top: 0px;
     /* border-right: 2px solid #666; */
+}
+
+#profile-controls {
+    padding: 10px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: var(--dark-grey);
+    border-radius: 5px;
+    gap: 10px;
+}
+
+#profile-controls span {
+    width: 100%;
+    display: flex;
+}
+
+#profile-controls span button {
+    flex: 1;
 }
 
 #profile-content {
@@ -507,7 +535,7 @@ span.spacer {
 }
 
 .pc-button {
-    background-color: var(--red);
+    background-color: var(--grey);
     border: none; 
     outline: none; 
     border-radius: 5px; 
@@ -517,11 +545,19 @@ span.spacer {
 }
 
 .pc-button:hover{
-    background-color: var(--light-red);
+    background-color: var(--grey-lighter);
 }
 
 .pc-button * {
     pointer-events: none;
+}
+
+.pc-button.red-button {
+    background-color: var(--red);
+}
+
+.pc-button.red-button:hover{
+    background-color: var(--light-red);
 }
 
 #pc-profile-card {

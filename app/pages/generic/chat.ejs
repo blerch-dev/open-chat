@@ -8,7 +8,7 @@
 <% } else { %>
 <body>
 <% } %>
-    <header><%- include('../partials/header', locals); %></header>
+    <% if(locals.includeHeader ?? true) { %><header><%- include('../partials/header', locals); %></header><% } %>
     <%- include('../partials/chat-window', locals); %>
 </body>
 </html>

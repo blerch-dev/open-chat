@@ -6,11 +6,31 @@
 <body>
     <header><%- include('../partials/header', locals); %></header>
     <main style="padding: 10px;">
-        <div id="profile-outline">
-            <a href="#pc-profile-card">Profile Card</a>
-            <a href="#pc-details">Details</a>
-            <a href="#pc-connections">Connections</a>
-            <a href="#pc-channel">Channel</a>
+        <% if(locals.user != undefined) { %>
+        <div id="profile-sideline">
+            <div id="profile-outline">
+                <a href="#pc-profile-card">Profile Card</a>
+                <a href="#pc-details">Details</a>
+                <a href="#pc-connections">Connections</a>
+                <a href="#pc-channel">Channel</a>
+            </div>
+            <div id="profile-controls">
+                <span id="pc-save">
+                    <button class="pc-button" data-href="/">
+                        <h3>Save</h3>
+                    </button>
+                </span>
+                <span id="pc-logout">
+                    <button class="pc-button red-button" data-href="/logout">
+                        <h3>Logout</h3>
+                    </button>
+                    <% if(false) { %>
+                        <button class="pc-button red-button" data-href="/logout?forceAll=true">
+                            <h3>Logout All Decives</h3>
+                        </button>
+                    <% } %>
+                </span>
+            </div>
         </div>
         <div id="profile-content">
             <div id="pc-profile-card"><h3>Profile Card</h3></div>
@@ -47,17 +67,10 @@
                     <% } %>
                 <% } %>
             </span>
-            <span id="pc-logout">
-                <button class="pc-button" data-href="/logout">
-                    <h3>Logout</h3>
-                </button>
-                <% if(false) { %>
-                    <button class="pc-button" data-href="/logout?forceAll=true">
-                        <h3>Logout All Decives</h3>
-                    </button>
-                <% } %>
-            </span>
         </div>
+        <% } else { %>
+            <h2>Sign in to view Profile.</h2>
+        <% } %>
     </main>
 </body>
 </html>

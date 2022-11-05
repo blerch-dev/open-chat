@@ -628,7 +628,25 @@ class AuthServer {
 
     async Logout(req, res, all = false) {}
 
-    async Signup(req, res) {}
+    async Signup(req, res) {
+        let input = {
+            email: req?.body?.email || undefined,
+            username: req?.body?.username || undefined,
+            password: req?.body?.password || undefined,
+            staySigned: req?.body?.token || undefined,
+            uuid: UUID.Generate()
+        }
+
+        let user = new User(input, true);
+        if(user instanceof User) {
+            let output = await this.createUser(user, input)
+            if(output instanceof User) {
+                return output;
+            } else {
+                return output;
+            }
+        }
+    }
 
     async AuthUser(req, res) {
         const { token, twitch_tokens } = req.cookies;
@@ -745,8 +763,10 @@ class AuthServer {
             
             if(typeof(twitch_tokens) === 'string') {
                 user = await this.twitchTokenAuth(twitch_tokens, setToken);
+                //Logger("Logging with Twitch Tokens:",  user);
             } else if(typeof(twitch_code) === 'string') {
                 user = await this.twitchCodeAuth(twitch_code, redirect, setToken);
+                //Logger("Logging with Twitch Codes:",  user);
             }
 
             if(user instanceof Error) {
@@ -913,7 +933,7 @@ class AuthServer {
     }
 
     async twitchTokenAuth(tokens, setCookie) {
-        Logger("Twitch Token Auth", tokens);
+        //Logger("Twitch Token Auth", tokens);
         if(typeof(tokens) === 'string') {
             try { tokens = JSON.parse(this._decryptToken(tokens)); } catch(err) { Logger("ECE:", err); }
         }
