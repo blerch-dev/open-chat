@@ -9,8 +9,8 @@
     --light-grey: #CBCDCF;
     --white: #f8f9fa;
 
-    --dark-grey-50: #2F343E88;
-    --grey-lighter: #5b6066;
+    --dark-grey-alt: #2F343E88;
+    --grey-alt: #5b6066;
 
     --blue: #3777FF;
     --light-blue: #4983FF;
@@ -26,6 +26,9 @@
     /* #region Third Parties */
     --twitch-purple: #6441A5;
     --twitch-white: #FFFFFF;
+
+    --youtube-red: #ff0000;
+    --youtube-white: #ffffff;
     /* #endregion */
 }
 
@@ -545,7 +548,7 @@ span.spacer {
 }
 
 .pc-button:hover{
-    background-color: var(--grey-lighter);
+    background-color: var(--grey-alt);
 }
 
 .pc-button * {

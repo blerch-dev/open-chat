@@ -107,6 +107,7 @@ class ChatClient {
                     //console.log("Message Value:", e.target.value);
                     if(e.target.value !== "") {
                         this.sendMessage(e.target.value);
+                        this.autoSearch(undefined, true);
                     }
                 } else if(e.code === "Tab") {
                     this.tabInput(e);
@@ -144,6 +145,7 @@ class ChatClient {
             return;
         }
 
+        console.log("Chat Message Data:", data);
         const { user, message, service } = data; let message_str = undefined;
         if(message == undefined || user.username == undefined) {
             // Bad Format (sometimes chat bot will publish uncaught state updates)
@@ -159,6 +161,7 @@ class ChatClient {
             message_elem.classList.add(this.getIdOdd() ? 'chat-message-odd' : 'chat-message-even')
             
         let str = `<span class="user-chat-name" data-ment="${user.username}" style="color: ${user.color || '#fff'};">`;
+        if(user.role) { str += `<img src="${user.role.src}" title="${user.role.name}">` }
         str += `${user.username}</span>: ${message_str}</p>`;
 
         let e = this.getChatElements().chatWrapper;
@@ -215,7 +218,10 @@ class ChatClient {
 
         socket.addEventListener('close', (e) => {
             //console.log('WS Close:', e);
-            this.serverMessage({ServerMessage: 'Connection Closed.'});
+            this.serverMessage({ServerMessage: 'Disconnected... Atempting to Reconnect.'});
+            setTimeout(() => {
+                this.connect();
+            }, 250);
         });
 
         socket.addEventListener('error', (e) => {
@@ -309,12 +315,12 @@ class ChatClient {
         }
     }
 
-    async autoSearch(e) {
+    async autoSearch(e, clear = false) {
         //console.log("AuthSearch:", e);
         const func = () => {
             this.currentTabIndex = -1;
             [...this.getChatElements().captureList.children].forEach((elem) => { elem.remove(); });
-            if(this.stringify < 0) {
+            if(e?.target?.value?.length < 1 || clear === true) {
                 this.tabList = [];
                 return;
             }

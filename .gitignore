@@ -136,3 +136,4 @@ dist
 .todo
 /config/config.json
 .vscode/*
+./config.json

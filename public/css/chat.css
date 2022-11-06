@@ -171,7 +171,7 @@ main.wrapper-main {
 }
 
 .chat-message-odd {
-    background-color: var(--dark-grey-50);
+    background-color: var(--dark-grey-alt);
 }
 
 .chat-message.resign {
@@ -187,18 +187,25 @@ main.wrapper-main {
 }
 
 /* Services */
-.chat-message.twitch {
+.chat-message.twitch, .chat-message.youtube {
     margin-left: 10px;
 }
 
-.chat-message.twitch::after {
+.chat-message.twitch::after, .chat-message.youtube::after {
     content: "";
     position: absolute;
     top: 0px;
     left: -10px;
     width: 10px;
     height: 100%;
+}
+
+.chat-message.twitch::after {
     background-color: var(--twitch-purple);
+}
+
+.chat-message.youtube::after {
+    background-color: var(--youtube-red);
 }
 
 .chat-message > * {

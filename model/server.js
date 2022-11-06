@@ -433,8 +433,19 @@ class ChatServer {
             return;
 
         // Filter User Data
+        let role_name = Roles.getName(json?.user?.roles ?? 0), role_data = Roles.getRoleData(role_name);
+        let role = role_name === 'Undefined' ? undefined : {
+            name: role_name,
+            src: role_data.src,
+            color: role_data.color
+        }
+
+        let channel_role = json?.user?.channels?.[json?.channel ?? '_generic_profile'];
+
         json.user = {
             username: json?.user?.username ?? 'undefined',
+            role: role,
+            channel_role: channel_role,
             roles: json?.user?.roles ?? 0,
             channel_roles: json?.user?.channels?.[json?.channel ?? '_generic_profile'],
             connections: json?.user?.connections

@@ -11,15 +11,27 @@ class Roles {
 
     static getName(val) {
         let keys = Object.getOwnPropertyNames(this);
+        let name = null, value = null;
         for(let i = 0; i < keys.length; i++) {
             if(keys[i] == "getName")
                 continue;
 
-            if(Roles[keys[i]] === val)
-                return keys[i];
+            if(Roles[keys[i]] & val) {
+                if(value == null || value > Roles[keys[i]]) {
+                    value = Roles[keys[i]];
+                    name = keys[i];
+                }
+            }
         }
 
-        return 'Undefined';
+        return name ?? 'Undefined';
+    }
+
+    static getRoleData(name) {
+        switch(name) {
+            case 'Admin': return { src: '', color: '' };
+            default: return { src: undefined, color: '#fff' };
+        }
     }
 }
 

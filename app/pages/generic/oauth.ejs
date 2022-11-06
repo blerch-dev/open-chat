@@ -18,7 +18,7 @@
                 document.getElementById('auth_header').textContent = `Authing User from${ typeof(t) === 'string' ? ' ' + t : '' } Credientials`;
             });
 
-            const fetchCode = <%= JSON.stringify(locals.fetchCode) %>;
+            const fetchCode = "<%= JSON.stringify(locals.fetchCode) %>";
             //console.log("Fetch Code:", fetchCode, typeof(fetchCode));
             let oauth_code = window.location.search.split('&')[0].split('=')[1], url = "";
             if(fetchCode) {
