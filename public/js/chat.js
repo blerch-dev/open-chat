@@ -160,8 +160,8 @@ class ChatClient {
         if(this.getSetting('SeperateBacking') && !this.getSetting('NoBackground'))
             message_elem.classList.add(this.getIdOdd() ? 'chat-message-odd' : 'chat-message-even')
             
-        let str = `<span class="user-chat-name" data-ment="${user.username}" style="color: ${user.color || '#fff'};">`;
-        if(user.role) { str += `<img src="${user.role.src}" title="${user.role.name}">` }
+        let str = `<span class="user-chat-name" data-ment="${user.username}" style="color: ${user?.role?.color || user.color || '#fff'};">`;
+        if(user.role?.src) { str += `<img src="${user.role.src}" title="${user.role.name}">` }
         str += `${user.username}</span>: ${message_str}</p>`;
 
         let e = this.getChatElements().chatWrapper;

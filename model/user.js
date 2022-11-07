@@ -29,7 +29,8 @@ class Roles {
 
     static getRoleData(name) {
         switch(name) {
-            case 'Admin': return { src: '', color: '' };
+            case 'Admin': return { src: '/assets/badge/admin.svg', color: '#ECA400' };
+            case 'Streamer': return { src: '/assets/badge/streamer.svg', color: '#E31717' };
             default: return { src: undefined, color: '#fff' };
         }
     }

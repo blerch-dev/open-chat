@@ -347,10 +347,11 @@ class ChatServer {
                 if(!connected) {
                     if(json?.room === 'null' || json?.room == null) {
                         Logger(`No Channel Found for ${json?.room}`, json);
-                        socket.send(JSON.stringify({ ServerMessage: `No Channel Found for ${json?.room}`}));
+                        socket.send(JSON.stringify({ ServerMessage: `No channel found for ${json?.room}`}));
                         return;
                     } else {
                         connect_user(json.room);
+                        socket.send(JSON.stringify({ ServerMessage: `Connected to ${json?.room}'s chat`}));
                         return;
                     }
                 }
@@ -441,6 +442,7 @@ class ChatServer {
         }
 
         let channel_role = json?.user?.channels?.[json?.channel ?? '_generic_profile'];
+        //Logger("Message User Data:", json.user);
 
         json.user = {
             username: json?.user?.username ?? 'undefined',
@@ -932,7 +934,7 @@ class AuthServer {
     }
 
     async twitchCodeAuth(code, redirect, setCookie) {
-        Logger("Twitch Code Auth", code, redirect);
+        //Logger("Twitch Code Auth", code, redirect);
         if(code === 'missing')
             return Error("Did not find twitch code.");
 

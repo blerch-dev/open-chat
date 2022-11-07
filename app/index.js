@@ -181,7 +181,7 @@ class OpenChatApp {
                 if(usr instanceof User) {
                     req.session.user = usr.toJSON();
                 } else {
-                    Logger("Failed User Auth:", usr);
+                    //Logger("Failed User Auth:", usr);
                 }
 
                 this.setOption('user', usr instanceof Error ? undefined : usr);
@@ -346,6 +346,14 @@ class OpenChatApp {
                 }
             });
         });
+
+        app.get('/logout', (req, res) => {
+            res.clearCookie('connect.sid');
+            res.clearCookie('token');
+            res.clearCookie('twitch_tokens');
+            res.redirect('/');
+        });
+
     }
 
     genericCatches(app) {
