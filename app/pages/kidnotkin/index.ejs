@@ -22,7 +22,10 @@
                     <% } %>
                 </div>
             </div>
-            <%- include('../partials/header-user', { user: user }) %>
+            <span style="display: flex; align-items: center; gap: 10px;">
+                <a href="/live" style="padding: 5px; border-radius: 3px; background-color: var(--dark-grey);">Livestream</a>
+                <%- include('../partials/header-user', { user: user }) %>
+            </span>
         </header>
         <main class="centered-group" style="gap: 20px;">
             <div class="module">

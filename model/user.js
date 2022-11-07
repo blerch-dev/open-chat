@@ -31,6 +31,7 @@ class Roles {
         switch(name) {
             case 'Admin': return { src: '/assets/badge/admin.svg', color: '#ECA400' };
             case 'Streamer': return { src: '/assets/badge/streamer.svg', color: '#E31717' };
+            case 'Tester': return { src: '/assets/badge/tester.svg', color: '#006D77' };
             default: return { src: undefined, color: '#fff' };
         }
     }
