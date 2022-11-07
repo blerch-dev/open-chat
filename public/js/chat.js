@@ -49,7 +49,7 @@ class ChatClient {
         }
         this.getChannel = () => { return Channel }
 
-        this.setRoom = (str) => { console.log('Room:', str); Room = str; }
+        this.setRoom = (str) => { /* console.log('Room:', str); */ Room = str; }
         this.getRoom = () => { return Room; }
 
         this.getChatElements = () => { return ChatElem; }
@@ -188,6 +188,7 @@ class ChatClient {
         }
     }
 
+    connected = false;
     async connect() {
         this.connectDom();
         this.setChatFills('emotes', getAllEmotes());
@@ -203,6 +204,7 @@ class ChatClient {
         socket.addEventListener('open', (e) => {
             //console.log("Connected to ChatServer. Sending Room ID.", room_id);
             //socket.send(JSON.stringify({ room: this.getRoom() }));
+            this.connected = true;
         });
 
         socket.addEventListener('message', (e) => {
@@ -218,7 +220,10 @@ class ChatClient {
 
         socket.addEventListener('close', (e) => {
             //console.log('WS Close:', e);
-            this.serverMessage({ServerMessage: 'Disconnected... Atempting to Reconnect.'});
+            if(this.connected) {
+                this.serverMessage({ServerMessage: 'Disconnected... Atempting to Reconnect.'});
+            }
+            this.connected = false;
             setTimeout(() => {
                 this.connect();
             }, 250);
@@ -257,7 +262,8 @@ class ChatClient {
 
         let elem = document.createElement('p');
         elem.classList.add('server-message');
-        elem.textContent = data.ServerMessage;
+        elem.innerHTML = `<img src="/assets/svg/info.svg" title="Info">${data.ServerMessage}`;
+        
         this.createMessageElement(null, elem);
     }
 

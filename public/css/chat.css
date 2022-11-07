@@ -366,4 +366,10 @@ main.wrapper-main {
     padding-right: 5px;
 }
 
+.server-message img {
+    margin-right: 3px;
+    width: 12px;
+    height: 12px;
+}
+
 /* #endregion */

@@ -345,7 +345,7 @@ class ChatServer {
                 } catch(err) { Logger('JSON Parse Error:', err, data.toString()); }
 
                 if(!connected) {
-                    if(json?.room === 'null' || json?.room == null) {
+                    if(json?.room === 'undefined' || json?.room == undefined) {
                         Logger(`No Channel Found for ${json?.room}`, json);
                         socket.send(JSON.stringify({ ServerMessage: `No channel found for ${json?.room}`}));
                         return;

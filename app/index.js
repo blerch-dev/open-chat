@@ -360,6 +360,15 @@ class OpenChatApp {
 
         // Live
         app.get('/live', (req, res, next) => {
+            if(this.getConfig()?.app?.env === 'dev') {
+                this.setOption('channel', {
+                    twitch: 'kidnotkin',
+                    youtube: 'UC_RoIpOp6eHnYIXMaj-ll-A'
+                });
+                this.setOption('host', req.hostname);
+                this.setOption('chatroom', 'kidnotkin');
+            }
+
             res.render('generic/live', this.getOptions());
         });
 
