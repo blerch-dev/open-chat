@@ -88,12 +88,22 @@ function replaceEmotes(str, chl) {
         return _str.trim();
     }
 
+    const _func = (rstr, el) => {
+        let _str = ` ${rstr} `;
+        for(let i = 0; i < el.length; i++) {
+            let rv = `<span class="emote emote-${el[i].name}"><img src="${el[i].href}${image_link}" alt="${el[i].name}"></span> `;
+            _str = _str.replaceAll(` ${el[i].name} `, rv);
+        }
+
+        return _str.trim();
+    }
+
     if(emote_list[chl] != undefined) {
-        return func(str, emote_list[chl]);
+        return _func(str, emote_list[chl]);
     } else {
         let emote_channels = Object.keys(emote_list), output = str;
         for(let i = 0; i < emote_channels.length; i++) {
-            output = func(output, emote_list[emote_channels[i]]);
+            output = _func(output, emote_list[emote_channels[i]]);
         }
         return output;
     }

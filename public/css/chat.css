@@ -157,6 +157,7 @@ main.wrapper-main {
     padding-right: 5px;
     font-size: 14px;
     word-wrap: break-word;
+    display: inline;
     /* word-break: break-all; */
 }
 
@@ -188,7 +189,7 @@ main.wrapper-main {
 
 /* Services */
 .chat-message.twitch, .chat-message.youtube {
-    margin-left: 10px;
+    margin-left: 4px;
 }
 
 .chat-message.twitch::after, .chat-message.youtube::after {
@@ -208,17 +209,24 @@ main.wrapper-main {
     background-color: var(--youtube-red);
 }
 
-.chat-message > * {
-    font-weight: bold;
+.chat-message * {
     font-size: 14px;
+}
+
+.chat-message i.badge > img {
+    position: relative;
+    top: 3px;
+    margin-right: 3px;
 }
 
 .chat-message > span.user-chat-name {
     display: flex;
     align-items: center;
-    float: left;
+    /* float: left; */
+    display: inline;
     position: relative;
     top: 0px;
+    font-weight: bold;
 }
 
 .chat-message > span.user-chat-name > img {

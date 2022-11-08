@@ -1,5 +1,5 @@
-.emote {
-    position: absolute;
-    display: in-line;
-    top: -4px;
+.emote img {
+    position: relative;
+    top: 4px;
+    margin-top: -12px;
 }

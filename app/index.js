@@ -180,11 +180,12 @@ class OpenChatApp {
             this.getAuth().AuthUser(req, res).then((usr) => {
                 if(usr instanceof User) {
                     req.session.user = usr.toJSON();
+                    this.setOption('user', usr.toJSON());
                 } else {
                     //Logger("Failed User Auth:", usr);
+                    this.setOption('user', undefined);
                 }
 
-                this.setOption('user', usr instanceof Error ? undefined : usr);
                 return next();
             });
         });

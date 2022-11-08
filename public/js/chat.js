@@ -68,7 +68,7 @@ class ChatClient {
                 let td = ChatList.splice(0, ChatList.length - (Settings.MaxElements ?? 200));
                 for(let i = 0; i < td.length; i++) {
                     if(td[i] instanceof Element)
-                        td.remove();
+                        td[i].remove();
                 }
             }
 
@@ -160,9 +160,10 @@ class ChatClient {
         if(this.getSetting('SeperateBacking') && !this.getSetting('NoBackground'))
             message_elem.classList.add(this.getIdOdd() ? 'chat-message-odd' : 'chat-message-even')
             
-        let str = `<span class="user-chat-name" data-ment="${user.username}" style="color: ${user?.role?.color || user.color || '#fff'};">`;
-        if(user.role?.src) { str += `<img src="${user.role.src}" title="${user.role.name}">` }
-        str += `${user.username}</span>: ${message_str}</p>`;
+        let str = ``;
+        if(user.role?.src) { str += `<i class="badge"><img src="${user.role.src}" title="${user.role.name}"></i>` }
+        str += `<span class="user-chat-name" data-ment="${user.username}" style="color: ${user?.role?.color || user.color || '#fff'};">`;
+        str += `${user.username}</span><span>: </span><span>${message_str}<span>`;
 
         let e = this.getChatElements().chatWrapper;
         let _snap = {
@@ -355,7 +356,7 @@ class ChatClient {
         let value = this.getChatElements().inputField.value.trim();
         let args = value.split(' ');
         args.pop();
-        args.push(`${this.tabList[index]} `);
+        args.push(`${this.tabList[index]}`);
         this.getChatElements().inputField.value = args.join(' ');
     }
 }
