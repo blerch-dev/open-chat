@@ -77,6 +77,9 @@ class ChatClient {
 
         this.setChatFills = (name, list) => { ChatFills[name] = [...list]; }
         this.getChatFill = (input) => {
+            if(input === '')
+                return [];
+
             let fills = [...ChatFills.cmds, ...ChatFills.users, ...ChatFills.emotes], matches = [];
             for(let i = 0; i < fills.length; i++) {
                 if(fills[i].toLowerCase().indexOf(input.toLowerCase()) === 0)
@@ -309,15 +312,16 @@ class ChatClient {
     async tabInput(e) {
         //console.log("TabInput:", e);
         e.preventDefault();
-        if(this.tabList.length <= this.currentTabIndex + 1) {
+        let value = e.shiftKey ? -1 : 1;
+        if((!e.shiftKey && this.tabList.length <= this.currentTabIndex + value) || (e.shiftKey && this.currentTabIndex + value < 0)) {
             if(this.tabList.length > 0) {
-                this.currentTabIndex = 0;
+                this.currentTabIndex = value < 0 ? this.tabList.length - 1 : 0;
                 this.placeFill(this.currentTabIndex);
             } else {
                 this.currentTabIndex = -1;
             }
         } else {
-            this.currentTabIndex += 1;
+            this.currentTabIndex += value;
             this.placeFill(this.currentTabIndex);
         }
     }
@@ -332,7 +336,9 @@ class ChatClient {
                 return;
             }
     
-            this.tabList = this.getChatFill(e.target.value);
+            let last_value = e.target.value.split(' ');
+            last_value = last_value[last_value.length - 1];
+            this.tabList = this.getChatFill(last_value);
             for(let i = 0; i < this.tabList.length; i++) {
                 let elem_click = () => { this.placeFill(i) };
                 let elem = document.createElement('li');

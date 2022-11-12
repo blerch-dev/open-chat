@@ -91,7 +91,7 @@ function replaceEmotes(str, chl) {
     const _func = (rstr, el) => {
         let _str = ` ${rstr} `;
         for(let i = 0; i < el.length; i++) {
-            let rv = `<span class="emote emote-${el[i].name}"><img src="${el[i].href}${image_link}" alt="${el[i].name}"></span> `;
+            let rv = ` <span class="emote emote-${el[i].name}"><img src="${el[i].href}${image_link}" alt="${el[i].name}"></span> `;
             _str = _str.replaceAll(` ${el[i].name} `, rv);
         }
 
