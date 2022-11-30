@@ -177,6 +177,7 @@ class OpenChatApp {
                 return next();
             }
 
+            Logger("Unauthed Cookies:", req.cookies);
             this.getAuth().AuthUser(req, res).then((usr) => {
                 if(usr instanceof User) {
                     req.session.user = usr.toJSON();

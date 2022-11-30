@@ -758,7 +758,7 @@ class AuthServer {
                         user = null;
                     } else {
                         user = result;
-                        Logger("Authing with Token");
+                        //Logger("Authing with Token");
                     }
                 }
             }
@@ -784,7 +784,7 @@ class AuthServer {
 
             if(user instanceof Error) {
                 errors.push(user);
-            } else {
+            } else if(user instanceof User) {
                 authed = true;
                 //Logger("Authing with Twitch", user);
             }
