@@ -1,0 +1,83 @@
+// Backend
+import path from 'path';
+import express from 'express';
+import bodyParser from 'body-parser';
+import session from 'express-session';
+import RedisStore from "connect-redis";
+import cookieParser from 'cookie-parser';
+
+import * as dotenv from 'dotenv';
+dotenv.config({ path: path.join(__dirname, '../.env') });
+
+import { RedisClient } from './state';
+
+export class Resource {
+    static State = `${process.env.STATE_SUB}.${process.env.ROOT_URL}`;
+    static Chat = `${process.env.CHAT_SUB}.${process.env.ROOT_URL}`;
+}
+
+declare module "express-session" {
+    interface SessionData {
+        // state: { [key: string]: any }
+        // user: { [key: string]: any }
+        [key: string]: { [key: string]: any }
+    }
+}
+
+export class Server {
+
+    private isProd = () => process.env.NODE_ENV === 'prod';
+    private app = express();
+    private props: { [key: string]: unknown } | null = null;
+    private redis: {
+        client?: RedisClient,
+        store?: RedisStore
+    } = {};
+
+    constructor(props?: { [key: string]: unknown }) {
+        // Setup
+        this.props = props ?? {};
+        console.log("Server Props:", this.props);
+
+        // Format
+        this.app.use(express.static(path.resolve(__dirname, './public/')));
+        this.app.use(bodyParser.json());
+        this.app.use(bodyParser.urlencoded({ extended: true }));
+        this.app.use(cookieParser());
+        this.app.enable('trust proxy');
+
+        const ttl = (60 * 60 * 24);
+        this.redis.client = new RedisClient(); // Local Only
+        this.redis.store = new RedisStore({ 
+            client: this.redis.client.getClient(),
+            ttl: ttl
+        });
+
+        const sessionParser = session({
+            store: this.redis.store,
+            resave: false,
+            saveUninitialized: false,
+            secret: process.env.REDIS_SECRET || 'blank',
+            cookie: {
+                secure: this.isProd(),
+                path: '/',
+                domain: `.${process.env.ROOT_URL}`,
+                sameSite: true,
+                httpOnly: true,
+                maxAge: ttl
+            },
+            rolling: true
+        });
+
+        this.app.use(sessionParser);
+
+        // Routes
+        this.app.use(async (req, res) => {
+            console.log("Subdomains:", req.subdomains);
+            res.end();
+        });
+
+        // save to server, use for WS
+        this.app.listen(process.env.SERVER_PORT ?? 8000);
+    }
+}
