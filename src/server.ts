@@ -1,4 +1,5 @@
 // Backend
+import http from 'http';
 import path from 'path';
 import express from 'express';
 import bodyParser from 'body-parser';
@@ -9,6 +10,7 @@ import cookieParser from 'cookie-parser';
 import * as dotenv from 'dotenv';
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
+import { sleep } from './tools';
 import { RedisClient } from './state';
 
 export class Resource {
@@ -24,11 +26,25 @@ declare module "express-session" {
     }
 }
 
+export interface Route {
+    callback: any,
+    resource?: string
+}
+
 export class Server {
 
-    private isProd = () => process.env.NODE_ENV === 'prod';
+    public getApp = () => { return this.app; }
+    public getListener: () => Promise<http.Server> = async () => { 
+        if(this.server == null) { await sleep(100); return (await this.getListener()); }  return this.server; 
+    }
+    public addRoute = (route: Route) => { this.app.use(route.resource ?? '*', route.callback); }
+
+    protected isProd = () => process.env.NODE_ENV === 'prod';
+
     private app = express();
+    private server: http.Server | null;
     private props: { [key: string]: unknown } | null = null;
+
     private redis: {
         client?: RedisClient,
         store?: RedisStore
@@ -72,12 +88,10 @@ export class Server {
         this.app.use(sessionParser);
 
         // Routes
-        this.app.use(async (req, res) => {
-            console.log("Subdomains:", req.subdomains);
-            res.end();
-        });
+        const routes = props?.routes as Route[] ?? [];
+        for(let i = 0; i < routes.length ?? []; i++) { this.addRoute(routes[i]); }
 
-        // save to server, use for WS
-        this.app.listen(process.env.SERVER_PORT ?? 8000);
+        // Listener
+        this.server = this.app.listen(process.env.SERVER_PORT ?? 8000);
     }
 }
