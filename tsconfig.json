@@ -58,6 +58,12 @@
       "forceConsistentCasingInFileNames": true,
       "resolveJsonModule": true
     },
-    "include": ["src/**/*"],
-    "exclude": ["node_modules"]
-  }
+    // "include": ["src/**/*"],
+    "exclude": ["node_modules"],
+    "files": [],
+    "references": [
+      { "path": "./src/core" },
+      { "path": "./src/server" },
+      { "path": "./src/scripts" }
+    ]
+}
