@@ -10,7 +10,7 @@ import cookieParser from 'cookie-parser';
 import * as dotenv from 'dotenv';
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-import { sleep } from '../core/tools';
+import { sleep } from './tools';
 import { RedisClient } from './state';
 
 export class Resource {
@@ -53,7 +53,6 @@ export class Server {
     constructor(props?: { [key: string]: unknown }) {
         // Setup
         this.props = props ?? {};
-        console.log("Server Props:", this.props);
 
         // Format
         this.app.use(express.static(path.resolve(__dirname, './public/')));
@@ -92,15 +91,6 @@ export class Server {
         for(let i = 0; i < routes.length ?? []; i++) { this.addRoute(routes[i]); }
 
         // Listener
-        this.server = this.app.listen(process.env.SERVER_PORT ?? 8000);
-    }
-}
-
-// Chat logic
-export class ChatServer extends Server {
-    constructor(props?: { [key: string]: unknown }) {
-        super(props);
-
-        // Establish WS, Use This Server for Listener
+        this.server = this.app.listen(props?.port ?? process.env.SERVER_PORT ?? 8000);
     }
 }
