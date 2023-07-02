@@ -46,10 +46,23 @@ export interface UserData {
     roles?: number,
     status?: number
     age?: number
-    connections?: {
-        twitch?: { id: string, name: string },
-        youtube?: { id: string, name: string }
-    }
+    connections?: UserConnection | UserConnectionDB
+}
+
+export interface UserConnection {
+    twitch?: { id: string, name: string },
+    youtube?: { id: string, name: string },
+    discord?: { id: string, name: string }
+}
+
+export interface UserConnectionDB {
+    user_id: string,
+    twitch_id: string,
+    twitch_name: string,
+    youtube_id: string,
+    youtube_name: string,
+    discord_id: string,
+    discord_name: string
 }
 
 export class User {
@@ -59,17 +72,28 @@ export class User {
 
     private data: UserData = { uuid: "", name: "" }
 
-    constructor(data: UserData) {
-        data = {
-            uuid: data.uuid,
-            name: data.name,
+    constructor(data?: UserData) {
+        this.data = {
+            uuid: data?.uuid ?? "",
+            name: data?.name ?? "",
             roles: data?.roles ?? 0,
             status: data?.status ?? 0,
             age: data?.age ?? Date.now(),
-            connections: data?.connections ?? {}
+            connections: (data?.connections as UserConnectionDB)?.user_id ? {
+                twitch: { 
+                    id: (data?.connections as UserConnectionDB)?.twitch_id ?? undefined,
+                    name: (data?.connections as UserConnectionDB)?.twitch_name ?? undefined
+                },
+                youtube: { 
+                    id: (data?.connections as UserConnectionDB)?.youtube_id ?? undefined,
+                    name: (data?.connections as UserConnectionDB)?.youtube_name ?? undefined
+                },
+                discord: { 
+                    id: (data?.connections as UserConnectionDB)?.discord_id ?? undefined,
+                    name: (data?.connections as UserConnectionDB)?.discord_name ?? undefined
+                },
+            } : data?.connections as UserConnection ?? {}
         }
-
-        this.data = data;
     }
 
     public toJSON() { return this.data; }

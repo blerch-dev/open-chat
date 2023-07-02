@@ -12,6 +12,8 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 
 import { sleep } from './tools';
 import { RedisClient } from './state';
+import { Authenticator } from './auth';
+import { DatabaseConnection } from './data';
 
 export class Resource {
     static State = `${process.env.STATE_SUB}.${process.env.ROOT_URL}`;
@@ -42,8 +44,10 @@ export class Server {
     protected isProd = () => process.env.NODE_ENV === 'prod';
 
     private app = express();
-    private server: http.Server | null;
-    private props: { [key: string]: unknown } | null = null;
+    private server: http.Server;
+    private props: { [key: string]: unknown };
+    private auth: Authenticator;
+    private db: DatabaseConnection;
 
     private redis: {
         client?: RedisClient,
@@ -53,6 +57,8 @@ export class Server {
     constructor(props?: { [key: string]: unknown }) {
         // Setup
         this.props = props ?? {};
+        this.auth = new Authenticator(this);
+        this.db = new DatabaseConnection(this);
 
         // Format
         this.app.use(express.static(path.resolve(__dirname, './public/')));
@@ -93,4 +99,7 @@ export class Server {
         // Listener
         this.server = this.app.listen(props?.port ?? process.env.SERVER_PORT ?? 8000);
     }
+
+    public getAuthenticator() { return this.auth; }
+    public getDatabaseConnection() { return this.db; }
 }
