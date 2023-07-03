@@ -1,7 +1,7 @@
 // Backend
 import http from 'http';
 import path from 'path';
-import express from 'express';
+import express, { Router } from 'express';
 import bodyParser from 'body-parser';
 import session from 'express-session';
 import RedisStore from "connect-redis";
@@ -14,6 +14,7 @@ import { sleep } from './tools';
 import { RedisClient } from './state';
 import { Authenticator } from './auth';
 import { DatabaseConnection } from './data';
+import { DefaultRoute } from './client';
 
 export class Resource {
     static State = `${process.env.STATE_SUB}.${process.env.ROOT_URL}`;
@@ -28,18 +29,13 @@ declare module "express-session" {
     }
 }
 
-export interface Route {
-    callback: any,
-    resource?: string
-}
-
 export class Server {
 
     public getApp = () => { return this.app; }
     public getListener: () => Promise<http.Server> = async () => { 
         if(this.server == null) { await sleep(100); return (await this.getListener()); }  return this.server; 
     }
-    public addRoute = (route: Route) => { this.app.use(route.resource ?? '*', route.callback); }
+    public addRoute = (route: Router) => { this.app.use(route); }
 
     protected isProd = () => process.env.NODE_ENV === 'prod';
 
@@ -93,7 +89,7 @@ export class Server {
         this.app.use(sessionParser);
 
         // Routes
-        const routes = props?.routes as Route[] ?? [];
+        const routes = props?.routes as Router[] ?? [];
         for(let i = 0; i < routes.length ?? []; i++) { this.addRoute(routes[i]); }
 
         // Listener
