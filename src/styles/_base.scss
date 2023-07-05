@@ -1,0 +1,151 @@
+:root {
+    --system-ui: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+
+    --black: #0e0d0d;
+    --page-bg: #272424;
+    --page-alt: #333131;
+    --header-bg: #363535;
+    --light-bg: #c2c1c1;
+    --font-color: #f5efef;
+
+    --twitch-purple: #6441a5;
+    --youtube-red: #ff0000;
+
+    --good: #0585ee;
+    --bad: #f04324;
+
+    --lower-shadow: linear-gradient(180deg, var(--header-bg) 0%, var(--header-bg) 85%, var(--page-alt) 100%);
+}
+
+html {
+    font-family: "Segoe UI", system-ui, Roboto, Helvetica, Arial, sans-serif, 
+        "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    // background-color: #2b2929;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: var(--page-bg);
+}
+
+* {
+    margin: 0px;
+    box-sizing: border-box;
+    position: relative;
+    color: var(--font-color);
+}
+
+code {
+    font-family: Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono,
+        Bitstream Vera Sans Mono, Courier New, monospace;
+}
+
+main {
+    flex: 1;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+}
+
+main.live {
+    padding: 0px;
+    flex-direction: row;
+}
+
+body > header {
+    background: var(--lower-shadow);
+}
+
+header {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    min-height: 30px;
+
+    & > #HeaderControls {
+        flex: 1;
+        display: flex;
+        align-items: center;
+
+        & > .header-links {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            padding: 0px 15px;
+            gap: 10px;
+        }
+
+        & > .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            & > #HeaderStatus {
+                padding: 6px 10px;
+                border-radius: 15px;
+                display: flex;
+                align-items: center;
+                background-color: var(--page-bg);
+
+                & > p {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+            }
+        }
+    }
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+.hide {
+    display: none !important;
+}
+
+a {
+    text-decoration: none;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+input {
+    background: var(--page-bg);
+}
+
+.twitch-tag {
+    background-color: var(--twitch-purple);
+    border: 2px solid var(--light-bg);
+    padding: 8px 12px;
+    width: fit-content;
+    border-radius: 5px;
+    gap: 8px !important;
+
+    & > img {
+        width: 20px;
+    }
+}
+
+.youtube-tag {
+    background-color: var(--youtube-red);
+    border: 2px solid var(--light-bg);
+    padding: 8px 12px;
+    width: fit-content;
+    border-radius: 5px;
+    gap: 8px !important;
+
+    & > img {
+        width: 20px;
+    }
+}

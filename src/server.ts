@@ -88,7 +88,10 @@ export class Server {
 
         this.app.use(sessionParser);
 
-        // Routes
+        // Default Route
+        this.app.use(DefaultRoute());
+
+        // Dynamic Routes
         const routes = props?.routes as Router[] ?? [];
         for(let i = 0; i < routes.length ?? []; i++) { this.addRoute(routes[i]); }
 

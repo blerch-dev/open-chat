@@ -67,7 +67,7 @@ export class DatabaseConnection {
         this.server = server;
         this.pool.connect()
             .then((pc) => { this.isConnected = true; })
-            .catch((reason) => { this.isConnected = false; console.log("DB Error:", reason); });
+            .catch((reason) => { this.isConnected = false; /* console.log("DB Error:", reason); */ });
     }
 
     private async waitForConnection(attempt = 0): Promise<boolean> {
