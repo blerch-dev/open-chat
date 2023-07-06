@@ -1,9 +1,10 @@
 import { Router } from "express";
 
+import { Server } from './server';
 import { AuthPage, HomePage } from "./pages";
 
 // Defined Routes
-export const DefaultRoute = (): Router => {
+export const DefaultRoute = (server: Server): Router => {
     const route = Router();
 
     route.get(['/login', '/signup', '/auth'], (req, res) => { res.send(AuthPage(req, res)); });

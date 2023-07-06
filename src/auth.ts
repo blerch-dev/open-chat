@@ -15,9 +15,17 @@ export class Authenticator {
     }
 
     public async verifyTwitch(req: any, res: any, next: any) {
-        let info = TwitchAuth.GetInfoFromToken(await TwitchAuth.GetTokens(req));
+        let info = await TwitchAuth.GetInfoFromToken(await TwitchAuth.GetTokens(req));
         console.log("Twitch Data:", info);
         return res.end();
+
+        let user = this.server.getDatabaseConnection().getUserFromTwitchID(info?.id ?? "");
+        if(user instanceof Error) { return res.send(this.CreateUserHTML()); }
+        // create session / return user data / next
+
+
+
+
 
         // if(info.error || json instanceof Error) {
         //     res.locals.authed = json instanceof Error ? json : new Error('Error authing from Twitch.');
@@ -38,12 +46,19 @@ export class Authenticator {
     }
 
     public async verifyYoutube(req: any, res: any, next: any) {
-        let info = YoutubeAuth.GetInfoFromToken(await YoutubeAuth.GetTokens(req));
+        let info = await YoutubeAuth.GetInfoFromToken(await YoutubeAuth.GetTokens(req));
         console.log("Youtube Data:", info);
         return res.end();
+
+        let user = this.server.getDatabaseConnection().getUserFromYoutubeID(info?.id ?? "");
+        if(user instanceof Error) { return res.send(this.CreateUserHTML()); }
+        // create session / return user data / next
     }
     // #endregion
 
+    private CreateUserHTML() {
+        // simple form page to return on verify if creating user
+    }
 }
 
 class TwitchAuth {

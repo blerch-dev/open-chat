@@ -190,5 +190,13 @@ export class DatabaseConnection {
         if(query instanceof Error) { return query; }
         return new User((await this.parseQueryResult(query)).data);
     }
+
+    public async getUserFromYoutubeID(id: string): Promise<User | Error> {
+        if(!(await this.waitForConnection())) { return this.ConnectionError; }
+
+        let query = await this.fullUserSearch('WHERE user_connections.youtube_id = $1', id);
+        if(query instanceof Error) { return query; }
+        return new User((await this.parseQueryResult(query)).data);
+    }
     // #endregion
 }
