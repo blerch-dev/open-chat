@@ -10,7 +10,7 @@ export class Authenticator {
     }
 
     // #region Twitch
-    public authTwitch(res: any) {
+    public authTwitch(req: any, res: any, next: any) {
         res.redirect(TwitchAuth.OAuthLink());
     }
 
@@ -41,7 +41,7 @@ export class Authenticator {
     // #endregion
 
     // #region Youtube
-    public authYoutube(res: any) {
+    public authYoutube(req: any, res: any, next: any) {
         return res.redirect(YoutubeAuth.OAuthLink());
     }
 
