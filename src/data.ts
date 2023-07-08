@@ -6,10 +6,10 @@ import { sleep } from './tools';
 
 const FormatDBString = () => {
     return `
-    DROP TABLE users;
+    DROP TABLE IF EXISTS users;
     CREATE TABLE IF NOT EXISTS "users" (
-        "uuid"          uuid NOT NULL,
-        "name"      varchar(32) NOT NULL,
+        "uuid"          uuid UNIQUE NOT NULL,
+        "name"          varchar(32) UNIQUE NOT NULL,
         "created_at"    timestamp NOT NULL DEFAULT NOW(),
         "last_login"    timestamp NOT NULL DEFAULT NOW(),
         "roles"         bigint NOT NULL DEFAULT 0,
@@ -17,7 +17,7 @@ const FormatDBString = () => {
         PRIMARY KEY ("uuid")
     );
 
-    DROP TABLE user_connections;
+    DROP TABLE IF EXISTS user_connections;
     CREATE TABLE IF NOT EXISTS "user_connections" (
         "user_id"       uuid NOT NULL,
         "twitch_id"     varchar(64),
@@ -29,7 +29,7 @@ const FormatDBString = () => {
         PRIMARY KEY ("user_id")
     );
 
-    DROP TABLE user_tokens;
+    DROP TABLE IF EXISTS user_tokens;
     CREATE TABLE IF NOT EXISTS "user_tokens" (
         "user_id"               uuid NOT NULL,
         "selector"              varchar(12) NOT NULL,
@@ -80,10 +80,11 @@ export class DatabaseConnection {
     }
 
     private async parseQueryResult(res: QueryResult): Promise<QueryOutput> {
-        console.log("Parsing Query Result:", res);
-
         const data = res.rows?.[0];
-        return { data: data };
+        console.log("Parsing Query Result:", res.command, res.rowCount, res.rows, data);
+        return { data: data, meta: {
+            rowCount: res.rowCount
+        }};
     }
 
     private fullUserSearch(str: string, ...vals: any[]): Promise<QueryResult | Error> {
@@ -108,6 +109,10 @@ export class DatabaseConnection {
     }
 
     // #region User
+    public validUser(data: UserData | any = {}): User | Error {
+        return User.ValidUserData(data) ? new User(data) : Error("Invalid User Data.");
+    }
+
     public async getUser(data: User | string | UserData): Promise<User | Error> {
         // data could be UserData or User or UUID or Username
         if(!(await this.waitForConnection())) { return this.ConnectionError; }
@@ -122,7 +127,7 @@ export class DatabaseConnection {
         }
 
         if(result instanceof Error) { return result; }
-        return new User((await this.parseQueryResult(result)).data);
+        return this.validUser((await this.parseQueryResult(result)).data);
     }
 
     public async createUser(data: User | UserData): Promise<User | Error> {
@@ -130,7 +135,7 @@ export class DatabaseConnection {
 
         // create user
 
-        return new User();
+        return this.validUser();
     }
 
     public async updateUser(data: User | UserData): Promise<User | Error> {
@@ -138,7 +143,7 @@ export class DatabaseConnection {
 
         // update user
 
-        return new User();
+        return this.validUser();
     }
 
     public async deleteUser(data: User | string | UserData): Promise<boolean | Error> {
@@ -155,6 +160,29 @@ export class DatabaseConnection {
         
         if(result instanceof Error) { return result; }
         return (await this.parseQueryResult(result)).deleteCount > 0;
+    }
+
+    // Quick Functions
+    public async availableUserName(...names: string[]): Promise<string[] | Error> {
+        if(!(await this.waitForConnection())) { return this.ConnectionError; }
+
+        if(names.length == 0)
+            return [];
+
+        let query = 'WHERE';
+        for(let i = 0; i < names.length; i++) {
+            query += ` name = $${i + 1}`;
+            if(i + 1 < names.length)
+                query += ' OR';
+        }
+
+        let result = await this.queryDB(query, ...names);
+        if(result instanceof Error)
+            return result;
+
+        // Filter
+        console.log("NameSearch Result:", result);
+        return [];
     }
     // #endregion
 
@@ -188,15 +216,17 @@ export class DatabaseConnection {
 
         let query = await this.fullUserSearch('WHERE user_connections.twitch_id = $1', id);
         if(query instanceof Error) { return query; }
-        return new User((await this.parseQueryResult(query)).data);
+        return this.validUser((await this.parseQueryResult(query)).data);
     }
+    // #endregion
 
+    // #region Youtube
     public async getUserFromYoutubeID(id: string): Promise<User | Error> {
         if(!(await this.waitForConnection())) { return this.ConnectionError; }
 
         let query = await this.fullUserSearch('WHERE user_connections.youtube_id = $1', id);
         if(query instanceof Error) { return query; }
-        return new User((await this.parseQueryResult(query)).data);
+        return this.validUser((await this.parseQueryResult(query)).data);
     }
     // #endregion
 }

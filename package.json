@@ -8,7 +8,8 @@
     "start": "node build/index.js",
     "build": "tsc -p tsconfig.json && npm run copyfiles && sass src/styles/app.scss build/public/css/style.css",
     "copyfiles": "copyfiles \"public/**/*\" build/",
-    "dev": "npm run build && npm start"
+    "dev": "npm run build && npm start",
+    "format-db": "npm run build && node run.js"
   },
   "author": "",
   "license": "ISC",

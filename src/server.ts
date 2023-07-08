@@ -31,13 +31,13 @@ declare module "express-session" {
 
 export class Server {
 
+    public getProps = () => { return this.props; }
     public getApp = () => { return this.app; }
     public getListener: () => Promise<http.Server> = async () => { 
         if(this.server == null) { await sleep(100); return (await this.getListener()); }  return this.server; 
     }
     public addRoute = (route: Router) => { this.app.use(route); }
-
-    protected isProd = () => process.env.NODE_ENV === 'prod';
+    public isProd = () => process.env.NODE_ENV === 'prod';
 
     private app = express();
     private server: http.Server;
@@ -53,6 +53,10 @@ export class Server {
     constructor(props?: { [key: string]: unknown }) {
         // Setup
         this.props = props ?? {};
+        this.props.env = process.env;
+        this.props.domain = `http${this.isProd() ? 's' : ''}://${this.isProd() ? 
+            `www.${process.env.ROOT_URL}` : `${process.env.DEV_URL}`}`;
+        
         this.auth = new Authenticator(this);
         this.db = new DatabaseConnection(this);
 
@@ -87,6 +91,16 @@ export class Server {
         });
 
         this.app.use(sessionParser);
+
+        // Auto Handles
+        this.app.use('*', (req, res, next) => {
+            if(req.session?.user == undefined && req.cookies.ssi) {
+                res.cookie('ssi_forward', req.protocol + '://' + req.hostname + req.originalUrl);
+                console.log("Placed Headers:", res.getHeader("set-cookie"));
+            }
+
+            return next();
+        });
 
         // Default Route
         this.app.use(DefaultRoute(this));

@@ -67,7 +67,7 @@ export interface UserConnectionDB {
 
 export class User {
     static ValidUserData(data: UserData) {
-        return data.uuid != "" && data.name !== "";
+        return data?.uuid && data?.name;
     }
 
     private data: UserData = { uuid: "", name: "" }

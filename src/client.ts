@@ -9,15 +9,19 @@ export const DefaultRoute = (server: Server): Router => {
     const auth = server.getAuthenticator();
 
     // OAuth Routes
-    route.get('/auth/twitch', auth.authTwitch);
-    route.get('/verify/twtich', auth.verifyTwitch);
+    route.post('/user/create', (req, res, next) => { auth.createAccount(req, res, next); });
 
-    route.get('/auth/youtube', auth.authYoutube);
-    route.get('/verify/youtube', auth.verifyYoutube);
+    route.get('/auth/twitch', (req, res, next) => { auth.authTwitch(req, res, next) });
+    route.get('/verify/twitch', (req, res, next) => { auth.verifyTwitch(req, res, next) });
+
+    route.get('/auth/youtube', (req, res, next) => { auth.authYoutube(req, res, next) });
+    route.get('/verify/youtube', (req, res, next) => { auth.verifyYoutube(req, res, next) });
 
     // Page Routes
-    route.get(['/login', '/signup', '/auth'], (req, res) => { res.send(AuthPage(req, res)); });
-    route.get('/', (req, res) => { res.send(HomePage(req, res)); });
+    route.get(['/login', '/signup', '/auth'], (req, res) => { res.send(AuthPage(req, res, server.getProps())); });
+    route.get('/profile', (req, res) => { res.send(`profile :: ${req.session.user?.toString()}`) });
+    route.get('/live', (req, res) => { res.send('live-page'); });
+    route.get('/', (req, res) => { res.send(HomePage(req, res, server.getProps())); });
 
     return route;
 }
