@@ -8,7 +8,7 @@ import { DefaultHead, DefaultLayout, HeaderComponent } from './components';
 
 export const HomePage = (req: any, res: any, data: any = {}) => {
     return DefaultLayout(DefaultHead(data?.tabTitle ?? "Site Title"), `
-        ${HeaderComponent(data?.headerTitle ?? data?.tabTitle ?? "Site Title", req?.session?.user?.getName(), [
+        ${HeaderComponent(data?.headerTitle ?? data?.tabTitle ?? "Site Title", req?.session?.user?.name, [
             // {label: "", link: ""}
         ])}
         <main>
@@ -53,14 +53,14 @@ export const AuthPage = (req: any, res: any, data: any = {}) => {
     </main>`
 
     return DefaultLayout(DefaultHead(data?.tabTitle ?? "Site Title"), `
-        ${HeaderComponent(data?.headerTitle ?? data?.tabTitle ?? "Site Title", req?.session?.user?.getName(), [
+        ${HeaderComponent(data?.headerTitle ?? data?.tabTitle ?? "Site Title", req?.session?.user?.name, [
             // {label: "", link: ""}
         ])}
         ${page}
     `);
 }
 
-export const SignUpPage = (req: any, res: any, data: any = {}) => {
+export const SignUpPage = (req: any, res: any, data: any = {}, userdata: any = {}) => {
     let page = `
     <main>
         <form class="auth-form" action="/user/create" method="POST">
@@ -75,20 +75,21 @@ export const SignUpPage = (req: any, res: any, data: any = {}) => {
                 type="username" 
                 name="username" 
                 id="username" 
-                value="${data?.username ?? ''}">
+                value="${userdata?.twitch?.name ?? userdata?.youtube?.name ?? userdata?.discord?.name ?? ''}">
             </span>
             <span class="auth-input">
                 <label for="code">Code:</label>
                 <input type="text" name="code" id="code" placeholder="Optional">
             </span>
-            <input type="hidden" name="data" value="${JSON.stringify(data).replace(/"/g, '\'')}">
+            <input type="hidden" name="data" value="${JSON.stringify(userdata).replace(/"/g, '\'')}">
             <span class="column-spacer"></span>
             <button class="auth-button" type="submit">Create Account</button>
         </form>
+        <script type="module" src="/js/auth.js"></script>
     </main>`;
 
     return DefaultLayout(DefaultHead(data?.tabTitle ?? "Site Title"), `
-        ${HeaderComponent(data?.headerTitle ?? data?.tabTitle ?? "Site Title", req?.session?.user?.getName(), [
+        ${HeaderComponent(data?.headerTitle ?? data?.tabTitle ?? "Site Title", req?.session?.user?.name, [
             // {label: "", link: ""}
         ])}
         ${page}

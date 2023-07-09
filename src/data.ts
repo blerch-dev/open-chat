@@ -1,6 +1,6 @@
 import { Pool, QueryResult } from 'pg';
 
-import { User, UserData, UserConnection } from './user';
+import { User, UserData, UserConnection, UserConnectionDB } from './user';
 import { Server } from './server';
 import { sleep } from './tools';
 
@@ -81,7 +81,7 @@ export class DatabaseConnection {
 
     private async parseQueryResult(res: QueryResult): Promise<QueryOutput> {
         const data = res.rows?.[0];
-        console.log("Parsing Query Result:", res.command, res.rowCount, res.rows, data);
+        // console.log("Parsing Query Result:", res.command, res.rowCount, res.rows, data);
         return { data: data, meta: {
             rowCount: res.rowCount
         }};
@@ -96,7 +96,7 @@ export class DatabaseConnection {
             ${str}
         `;
 
-        return this.queryDB(query, vals);
+        return this.queryDB(query, ...vals);
     }
 
     public async queryDB(query: string, ...values: any): Promise<QueryResult | Error> {
@@ -109,7 +109,8 @@ export class DatabaseConnection {
     }
 
     // #region User
-    public validUser(data: UserData | any = {}): User | Error {
+    private validUser(data: UserData | any = {}): User | Error {
+        data.age = (new Date(data.created_at)).getTime();
         return User.ValidUserData(data) ? new User(data) : Error("Invalid User Data.");
     }
 
@@ -133,9 +134,37 @@ export class DatabaseConnection {
     public async createUser(data: User | UserData): Promise<User | Error> {
         if(!(await this.waitForConnection())) { return this.ConnectionError; }
 
-        // create user
+        let info = (data as User)?.toJSON() ?? data as UserData;
+        if(!User.ValidUserData(info))
+            return Error("Invalud user data was given. Can't create user.");
 
-        return this.validUser();
+        //console.log("Create User Data:", info);
+
+        let query = 'SELECT * FROM users WHERE uuid = $1 OR LOWER(name) = $2';
+        let result = await this.queryDB(query, info.uuid, info.name.toLowerCase());
+        if(result instanceof Error)
+            return result;
+        else if(result?.rowCount)
+            return Error("Name/ID was already taken. Try again with a valid Name/ID.");
+
+        // Connections
+        let added = await this.setConnections(info?.uuid, info?.connections ?? {});
+        if(added instanceof Error) {
+            return added;
+        } else if(added !== true) {
+            return Error("Issue adding connection to DB.");
+        }
+
+        query = 'INSERT INTO users (uuid, name, created_at, last_login, roles, status)'
+            + ' VALUES ($1, $2, to_timestamp($3), to_timestamp($4), $5, $6)';
+
+        let time = Math.floor((info?.age ?? 0) / 1000);
+        let values = [info?.uuid, info?.name, time, time, info?.roles, info?.status];
+        result = await this.queryDB(query, ...values);
+        if(result instanceof Error)
+            return result;
+
+        return this.validUser(info);
     }
 
     public async updateUser(data: User | UserData): Promise<User | Error> {
@@ -163,13 +192,35 @@ export class DatabaseConnection {
     }
 
     // Quick Functions
-    public async availableUserName(...names: string[]): Promise<string[] | Error> {
+    public async availableUUIDs(...ids: string[]): Promise<string[] | Error> {
+        if(!(await this.waitForConnection())) { return this.ConnectionError; }
+
+        if(ids.length == 0)
+            return [];
+
+        let query = `SELECT uuid FROM users WHERE`;
+        for(let i = 0; i < ids.length; i++) {
+            query += ` uuid = $${i + 1}`;
+            if(i + 1 < ids.length)
+                query += ' OR';
+        }
+
+        let result = await this.queryDB(query, ...ids);
+        if(result instanceof Error)
+            return result;
+
+        //console.log("UUIDSearch Result:", result.rows, ids, );
+        let usedIds = (result as QueryResult).rows;
+        return ids.filter(word => !(usedIds.includes(word)));
+    }
+
+    public async availableUserNames(...names: string[]): Promise<string[] | Error> {
         if(!(await this.waitForConnection())) { return this.ConnectionError; }
 
         if(names.length == 0)
             return [];
 
-        let query = 'WHERE';
+        let query = 'SELECT name FROM users WHERE';
         for(let i = 0; i < names.length; i++) {
             query += ` name = $${i + 1}`;
             if(i + 1 < names.length)
@@ -181,25 +232,55 @@ export class DatabaseConnection {
             return result;
 
         // Filter
-        console.log("NameSearch Result:", result);
-        return [];
+        //console.log("NameSearch Result:", result);
+        let usedNames = (result as QueryResult).rows.map((name) => name.toLowerCase());
+        return names.filter(name => !(usedNames.includes(name.toLowerCase())));
     }
     // #endregion
 
     // #region Connections
-    public async addConnection(uuid: string, data: UserConnection): Promise<boolean | Error> {
+    public async setConnections(uuid: string, data: UserConnection | UserConnectionDB, overwrite = false): Promise<boolean | Error> {
         if(!(await this.waitForConnection())) { return this.ConnectionError; }
 
-        return false;
+        let query = "SELECT * FROM user_connections WHERE user_id = $1";
+        let result = await this.queryDB(query, uuid);
+        if(result instanceof Error)
+            return result;
+
+        let current = await this.parseQueryResult(result);
+
+        query = 'INSERT INTO user_connections (user_id, twitch_id, twitch_name, youtube_id, youtube_name, discord_id, discord_name)'
+            + ' VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (user_id) DO UPDATE SET'
+            + ' twitch_id = $2, twitch_name = $3,'
+            + ' youtube_id = $4, youtube_name = $5,'
+            + ' discord_id = $6, discord_name = $7';
+
+        //console.log("User Connection Data:", data);
+        let getValue = (value: any, name: string) => {
+            let finalValue = overwrite ? value : current[name] ?? !overwrite ? value : current[name] ?? "";
+            //console.log(`Get Value: '${value}', '${current[name]}', '${finalValue}'`);
+            return finalValue;
+        }
+
+        let values = [
+            uuid, 
+            getValue((data as UserConnection)?.twitch?.id ?? (data as UserConnectionDB)?.twitch_id, 'twitch_id'),
+            getValue((data as UserConnection)?.twitch?.name ?? (data as UserConnectionDB)?.twitch_name, 'twitch_name'),
+            getValue((data as UserConnection)?.youtube?.id ?? (data as UserConnectionDB)?.youtube_id, 'youtube_id'),
+            getValue((data as UserConnection)?.youtube?.name ?? (data as UserConnectionDB)?.youtube_name, 'youtube_name'),
+            getValue((data as UserConnection)?.discord?.id ?? (data as UserConnectionDB)?.discord_id, 'discord_id'),
+            getValue((data as UserConnection)?.discord?.name ?? (data as UserConnectionDB)?.discord_name, 'discord_name')
+        ];
+
+        result = await this.queryDB(query, ...values);
+        if(result instanceof Error)
+            return result;
+
+        // Check if Valid
+        return result?.rowCount > 0;
     }
 
-    public async updateConnection(uuid: string, data: UserConnection): Promise<boolean | Error> {
-        if(!(await this.waitForConnection())) { return this.ConnectionError; }
-
-        return false;
-    }
-
-    public async removeConnection(uuid: string): Promise<boolean | Error> {
+    public async removeConnections(uuid: string): Promise<boolean | Error> {
         if(!(await this.waitForConnection())) { return this.ConnectionError; }
 
         return false;
@@ -214,7 +295,7 @@ export class DatabaseConnection {
     public async getUserFromTwitchID(id: string): Promise<User | Error> {
         if(!(await this.waitForConnection())) { return this.ConnectionError; }
 
-        let query = await this.fullUserSearch('WHERE user_connections.twitch_id = $1', id);
+        let query = await this.fullUserSearch('WHERE user_connections.twitch_id = $1', id.toString());
         if(query instanceof Error) { return query; }
         return this.validUser((await this.parseQueryResult(query)).data);
     }
@@ -224,7 +305,7 @@ export class DatabaseConnection {
     public async getUserFromYoutubeID(id: string): Promise<User | Error> {
         if(!(await this.waitForConnection())) { return this.ConnectionError; }
 
-        let query = await this.fullUserSearch('WHERE user_connections.youtube_id = $1', id);
+        let query = await this.fullUserSearch('WHERE user_connections.youtube_id = $1', id.toString());
         if(query instanceof Error) { return query; }
         return this.validUser((await this.parseQueryResult(query)).data);
     }

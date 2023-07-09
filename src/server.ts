@@ -67,7 +67,7 @@ export class Server {
         this.app.use(cookieParser());
         this.app.enable('trust proxy');
 
-        const ttl = (60 * 60 * 24);
+        const ttl = (1000 * 60 * 60 * 24); // 1 day session
         this.redis.client = new RedisClient(); // Local Only
         this.redis.store = new RedisStore({ 
             client: this.redis.client.getClient(),
@@ -82,7 +82,7 @@ export class Server {
             cookie: {
                 secure: this.isProd(),
                 path: '/',
-                domain: `.${process.env.ROOT_URL}`,
+                domain: this.isProd() ? `.${process.env.ROOT_URL}` : undefined,
                 sameSite: true,
                 httpOnly: true,
                 maxAge: ttl
@@ -94,6 +94,7 @@ export class Server {
 
         // Auto Handles
         this.app.use('*', (req, res, next) => {
+            //console.log("Session:", req.session);
             if(req.session?.user == undefined && req.cookies.ssi) {
                 res.cookie('ssi_forward', req.protocol + '://' + req.hostname + req.originalUrl);
                 console.log("Placed Headers:", res.getHeader("set-cookie"));

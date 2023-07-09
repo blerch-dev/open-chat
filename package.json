@@ -19,6 +19,7 @@
     "@types/express-session": "^1.17.7",
     "@types/node": "^20.3.2",
     "@types/pg": "^8.10.2",
+    "@types/uuid": "^9.0.2",
     "@types/ws": "^8.5.5",
     "copyfiles": "^2.4.1",
     "sass": "^1.63.6",

@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from 'uuid';
 
 export enum Status {
     VALID = 1 << 0, // also works as "follows" per channel
@@ -66,6 +67,7 @@ export interface UserConnectionDB {
 }
 
 export class User {
+    static GenerateUUID() { return uuidv4(); }
     static ValidUserData(data: UserData) {
         return data?.uuid && data?.name;
     }

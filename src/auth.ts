@@ -2,7 +2,7 @@ import { google } from 'googleapis';
 
 import { Server } from './server';
 import { SignUpPage } from './pages';
-import { User } from './user';
+import { User, UserData } from './user';
 
 export class Authenticator {
 
@@ -14,11 +14,44 @@ export class Authenticator {
         this.debug = debug ?? !this.server.isProd();
     }
 
-    public async createAccount(req: any, res: any, next: any): Promise<boolean> {
-        return false;
-        
-        // check if name is available
-        // create and return true or return false
+    public async handleUserAuth(req: any, res: any, next: any, user: any, userdata: any = {}) {
+        if(user instanceof Error) { return res.send(SignUpPage(req, res, this.server.getProps(), userdata)); }
+        user = user as User; req.session.user = user.toJSON(); return res.redirect('/profile');
+    }
+
+    public async createAccount(req: any, res: any, next: any) {
+        const { code, username, data } = req.body;
+
+        // Lookup Code for Role - TODO
+            // could generate uuuids, add to seperate table that describes roles/permissions
+            // would be applied here
+
+        let json = JSON.parse(data.replace(/'/g, '\"'));
+        let validNames = await this.server.getDatabaseConnection().availableUserNames(username);
+        if(validNames instanceof Error)
+            return res.json({ Error: "Name is already taken." });
+
+        let userdata: UserData = {
+            uuid: User.GenerateUUID(),
+            name: username ?? null,
+            age: Date.now(),
+            connections: json ?? {}
+        }
+
+        let result = await this.server.getDatabaseConnection().availableUUIDs(userdata.uuid);
+        // console.log("Check:", User.ValidUserData(userdata), !(result instanceof Error), userdata, result);
+        if(User.ValidUserData(userdata) && !(result instanceof Error) && result.length == 1) {
+            let user = await this.server.getDatabaseConnection().createUser(new User(userdata));
+            if(user instanceof Error) {
+                console.log("Error Creating User -", user);
+                return res.json({ Error: "Error creating user, try again later.", Code: 0x0101 });
+            }
+
+            req.session.user = (user as User).toJSON();
+            return res.json({ Redirect: '/profile' });
+        }
+
+        return res.json({ Error: "Issue with generated user info, try again later.", Code: 0x0102 });
     }
 
     // #region Twitch
@@ -30,8 +63,9 @@ export class Authenticator {
         let tokens = await TwitchAuth.GetTokens(req, this.server.getProps()?.domain + '/verify/twitch');
         let info = await TwitchAuth.GetInfoFromToken(tokens);
         let user = await this.server.getDatabaseConnection().getUserFromTwitchID(info?.id ?? "");
-        if(user instanceof Error) { return res.send(SignUpPage(req, res, this.server.getProps())); }
-        user = user as User; req.session.user = user.toJSON(); return res.redirect('/profile');
+        return await this.handleUserAuth(req, res, next, user, { 
+            twitch: { id: info?.id, name: info?.display_name ?? info?.login },
+        });
     }
     // #endregion
 
@@ -47,11 +81,9 @@ export class Authenticator {
         if(this.debug) { console.log("Youtube Data:", info); }
 
         let user = await this.server.getDatabaseConnection().getUserFromYoutubeID(info?.id ?? "");
-        if(user instanceof Error) { return res.send(SignUpPage(req, res, this.server.getProps())); }
-
-        user = user as User;
-        req.session.user = user.toJSON();
-        return res.redirect('/profile');
+        return await this.handleUserAuth(req, res, next, user, { 
+            youtube: { id: info?.id, name: info?.username }, // placeholder username field name
+        });
     }
     // #endregion
 }

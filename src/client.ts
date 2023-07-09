@@ -8,7 +8,7 @@ export const DefaultRoute = (server: Server): Router => {
     const route = Router();
     const auth = server.getAuthenticator();
 
-    // OAuth Routes
+    // Auth Routes
     route.post('/user/create', (req, res, next) => { auth.createAccount(req, res, next); });
 
     route.get('/auth/twitch', (req, res, next) => { auth.authTwitch(req, res, next) });
@@ -19,7 +19,9 @@ export const DefaultRoute = (server: Server): Router => {
 
     // Page Routes
     route.get(['/login', '/signup', '/auth'], (req, res) => { res.send(AuthPage(req, res, server.getProps())); });
-    route.get('/profile', (req, res) => { res.send(`profile :: ${req.session.user?.toString()}`) });
+    route.get(['/logout'], (req, res) => { req.session.destroy((err) => {}); res.redirect('/'); })
+
+    route.get('/profile', (req, res) => { res.send(`profile :: ${JSON.stringify(req.session.user)}`) });
     route.get('/live', (req, res) => { res.send('live-page'); });
     route.get('/', (req, res) => { res.send(HomePage(req, res, server.getProps())); });
 
