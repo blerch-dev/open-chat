@@ -41,13 +41,24 @@ for(let i = 0; i < roleData.length; i++) {
     Roles[rd.name] = rd;
 }
 
+export interface UserRecord {
+    id: number,
+    user_id: string,
+    type: number,
+    valid: boolean,
+    created_at: number,
+    expires: number,
+    notes?: string
+}
+
 export interface UserData {
     uuid: string,
     name: string,
     roles?: number,
-    status?: number
-    age?: number
-    connections?: UserConnection | UserConnectionDB
+    status?: number,
+    age?: number,
+    connections?: UserConnection | UserConnectionDB,
+    records?: UserRecord[]
 }
 
 export interface UserConnection {
@@ -94,7 +105,8 @@ export class User {
                     id: (data?.connections as UserConnectionDB)?.discord_id ?? undefined,
                     name: (data?.connections as UserConnectionDB)?.discord_name ?? undefined
                 },
-            } : data?.connections as UserConnection ?? {}
+            } : data?.connections as UserConnection ?? {},
+            records: data?.records ?? []
         }
     }
 
@@ -110,5 +122,14 @@ export class User {
         return roles.sort((a, b) => a.value - b.value);
     }
     public getStatus() { return this.data.status; }
+    public getEffectiveStatus() {
+        let status = this.data.status ?? 0; let records = this.data.records ?? [];
+        for(let i = 0; i < records.length; i++) {
+            if(records[i].valid && records[i].expires > Date.now())
+                status = status | records[i].type;
+        }
+
+        return status;
+    }
 }
 

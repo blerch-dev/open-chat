@@ -3,14 +3,12 @@ import * as dotenv from 'dotenv';
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 import { DefaultHead, DefaultLayout, HeaderComponent } from './components';
+import { Roles } from '../user';
 
 // Need to Formalize Data
 
 export const HomePage = (req: any, res: any, data: any = {}) => {
-    return DefaultLayout(DefaultHead(data?.tabTitle ?? "Site Title"), `
-        ${HeaderComponent(data?.headerTitle ?? data?.tabTitle ?? "Site Title", req?.session?.user?.name, [
-            // {label: "", link: ""}
-        ])}
+    return DefaultLayout(req, res, data, `
         <main>
             <h3>Home Page</h3>
         </main>
@@ -52,10 +50,7 @@ export const AuthPage = (req: any, res: any, data: any = {}) => {
         </div>
     </main>`
 
-    return DefaultLayout(DefaultHead(data?.tabTitle ?? "Site Title"), `
-        ${HeaderComponent(data?.headerTitle ?? data?.tabTitle ?? "Site Title", req?.session?.user?.name, [
-            // {label: "", link: ""}
-        ])}
+    return DefaultLayout(req, res, data, `
         ${page}
     `);
 }
@@ -88,15 +83,109 @@ export const SignUpPage = (req: any, res: any, data: any = {}, userdata: any = {
         <script type="module" src="/js/auth.js"></script>
     </main>`;
 
-    return DefaultLayout(DefaultHead(data?.tabTitle ?? "Site Title"), `
-        ${HeaderComponent(data?.headerTitle ?? data?.tabTitle ?? "Site Title", req?.session?.user?.name, [
-            // {label: "", link: ""}
-        ])}
+    return DefaultLayout(req, res, data, `
         ${page}
     `);
 }
 
-export const ChatPage = (req: any, res: any) => {
+export const ProfilePage = (req: any, res: any, data: any = {}) => {
+    let isDev = req?.session?.user?.roles & Roles["Admin"]?.value;
 
+    let dev = `
+    <div id="Developer" class="profile-section">
+        <h2>Developer Info</h2>
+        <span class="profile-card">
+            <h4>Full User</h4>
+            <pre>${JSON.stringify(req.session.user, null, 2)}</pre>
+        </span>
+    </div>
+    `;
+
+    // Role Placeholder
+    /*
+        ${roles.map((ri) => {
+            return `<p style="color: ${ri.color};">${ri.name}</p>`
+        }).join('<br>')}
+    */
+
+    // Connection Placeholder
+    /*
+        ${con?.twitch ? `
+            <span class="profile-card-tag twitch-tag">
+                <img src="/assets/logos/twitch.svg">
+                <h4>${con.twitch.username}</h4>
+            </span>
+        ` : `
+            <a href="${auth_link('/twitch')}"><h4>Add Twitch Account</h4></a>
+        `}
+        ${con?.youtube ? `
+            <span class="profile-card-tag youtube-tag">
+                <img src="/assets/logos/youtube.svg">
+                <h4>${con.youtube.username}</h4>
+            </span>
+        ` : `
+            <a href="${auth_link('/youtube')}"><h4>Add Youtube Account</h4></a>
+        `}
+    */
+
+    let content = `
+    <div class="content-section">
+        ${isDev ? dev : ''}
+        <div id="Account" class="profile-section">
+            <h2>Account Details</h2>
+            <span class="profile-card">
+                <span class="profile-card-tag">
+                    <h4>Username:</h4>
+                    <p>${req?.session?.user?.name}</p>
+                </span>
+                <span class="profile-card-group">
+                    <h4>Roles:</h4>
+                    <p>role placeholder</p>
+                </span>
+            </span>
+        <div>
+        <div>
+            <h2>Connections</h2>
+            <span class="profile-card">
+                <p>connection placeholder</p>
+            </span>
+        </div>
+        <div>
+            <h2>Channels</h2>
+            <span class="profile-card">
+                    <h4>Channels TODO</h4>
+            </span>
+        </div>
+    </div>
+    `;
+
+    let page = `
+    <main class="profile-page">
+        <nav class="section-nav">
+            <div style="flex: 1;">
+                ${isDev ? '<a href="/profile#Developer">Developer</a>' : ''}
+                <a href="/profile#Account">Account</a>
+            </div>
+            <div style="padding-bottom: 20px;">
+                <span class="section-link">
+                    <a href="/logout">Logout</a>
+                </span>
+            </div>
+        </nav>
+        ${content}
+    </main>
+    `;
+
+    return DefaultLayout(req, res, data, `
+        ${page}
+    `);
+}
+
+export const ChatPage = (req: any, res: any, data: any = {}) => {
+    let page = ``;
+
+    return DefaultLayout(req, res, data, `
+        ${page}
+    `);
 }
 

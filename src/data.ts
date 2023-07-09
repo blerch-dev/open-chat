@@ -4,9 +4,9 @@ import { User, UserData, UserConnection, UserConnectionDB } from './user';
 import { Server } from './server';
 import { sleep } from './tools';
 
-const FormatDBString = () => {
+const FormatDBString = (hardFormat = false) => {
     return `
-    DROP TABLE IF EXISTS users;
+    ${hardFormat ? 'DROP TABLE IF EXISTS users;' : ''}
     CREATE TABLE IF NOT EXISTS "users" (
         "uuid"          uuid UNIQUE NOT NULL,
         "name"          varchar(32) UNIQUE NOT NULL,
@@ -17,7 +17,7 @@ const FormatDBString = () => {
         PRIMARY KEY ("uuid")
     );
 
-    DROP TABLE IF EXISTS user_connections;
+    ${hardFormat ? 'DROP TABLE IF EXISTS user_connections;' : ''}
     CREATE TABLE IF NOT EXISTS "user_connections" (
         "user_id"       uuid NOT NULL,
         "twitch_id"     varchar(64),
@@ -29,13 +29,25 @@ const FormatDBString = () => {
         PRIMARY KEY ("user_id")
     );
 
-    DROP TABLE IF EXISTS user_tokens;
+    ${hardFormat ? 'DROP TABLE IF EXISTS user_tokens;' : ''}
     CREATE TABLE IF NOT EXISTS "user_tokens" (
         "user_id"               uuid NOT NULL,
         "selector"              varchar(12) NOT NULL,
         "hashed_validator"      varchar(128) NOT NULL,
         "expires"               timestamp NOT NULL,
         PRIMARY KEY ("selector")
+    );
+
+    ${hardFormat ? 'DROP TABLE IF EXISTS user_status_effects;' : ''}
+    CREATE TABLE IF NOT EXISTS "user_status_effects" (
+        "id"                    serial,
+        "user_id"               uuid NOT NULL,
+        "type"                  smallint NOT NULL DEFAULT 0,
+        "valid"                 boolean NOT NULL DEFAULT 'yes',
+        "created_at"            timestamp NOT NULL DEFAULT NOW(),
+        "expires"               timestamp NOT NULL DEFAULT NOW() + interval '1 day',
+        "notes"                 text,
+        PRIMARY KEY ("id")
     );
     `;
 }
@@ -46,9 +58,12 @@ interface QueryOutput {
 }
 
 export class DatabaseConnection {
-    static FormatString = FormatDBString();
+    static FormatDatabase = async (hardFormat = false) => {
+        let db = new DatabaseConnection();
+        return await db.queryDB(FormatDBString(hardFormat));
+    }
 
-    private server: Server;
+    private server: Server | undefined;
     private ConnectionError = new Error("Could not connect to DB.");
     private maxAttempt = 10;
     private isConnected = false;
@@ -63,7 +78,7 @@ export class DatabaseConnection {
         // connectionTimeoutMillis: 2000
     });
 
-    constructor(server: Server) {
+    constructor(server?: Server) {
         this.server = server;
         this.pool.connect()
             .then((pc) => { this.isConnected = true; })
@@ -87,12 +102,17 @@ export class DatabaseConnection {
         }};
     }
 
+    // needs view for user_status_effects
     private fullUserSearch(str: string, ...vals: any[]): Promise<QueryResult | Error> {
         let query = `
             SELECT users.*,
-            to_json(user_connections.*) as connections
+            to_json(user_connections.*) as connections,
+            json_agg(DISTINCT user_status_effects.*) as records
             FROM users
             LEFT JOIN user_connections ON users.uuid = user_connections.user_id
+            LEFT JOIN user_status_effects ON users.uuid = user_status_effects.user_id
+                AND user_status_effects.valid = 'yes'
+                AND user_status_effects.expires > CURRENT_TIMESTAMP
             ${str}
         `;
 
@@ -111,6 +131,7 @@ export class DatabaseConnection {
     // #region User
     private validUser(data: UserData | any = {}): User | Error {
         data.age = (new Date(data.created_at)).getTime();
+        console.log("Valid User Records:", data.records); // format times
         return User.ValidUserData(data) ? new User(data) : Error("Invalid User Data.");
     }
 

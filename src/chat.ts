@@ -57,21 +57,23 @@ export class SocketConnection {
 }
 
 // Chat logic
-export class ChatServer extends Server {
+export class ChatHandler {
 
+    private server: Server;
+    private props: { [key: string]: unknown } = {};
     private wss = new WebSocket.Server({
         noServer: true
     });
 
     private UserSockets = new Map<string, SocketConnection>();
 
-    constructor(props?: { [key: string]: unknown }) {
-        let data = props ?? {}; data.port = data?.port ?? process.env.CHAT_PORT ?? "8001";
-        super(data);
+    constructor(server: Server, props?: { [key: string]: unknown }) {
+        this.server = server;
+        this.props = { ...server.getProps(), ...props };
 
         // Establish WS, Use This Server for Listener
         this.configureServer();
-        this.getListener().then((listener) => { listener.on('upgrade', this.handleUpgrade); });
+        server.getListener().then((listener) => { listener.on('upgrade', this.handleUpgrade); });
     }
 
     private async handleUpgrade(request: any, socket: any, head: any) {

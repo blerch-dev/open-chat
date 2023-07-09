@@ -29,6 +29,15 @@ declare module "express-session" {
     }
 }
 
+export interface SiteData {
+    content?: {
+        tab?: string,
+        header?: string
+    }
+    links?: { link: string, label: string }[],
+    transparent?: boolean
+}
+
 export class Server {
 
     public getProps = () => { return this.props; }
@@ -41,7 +50,7 @@ export class Server {
 
     private app = express();
     private server: http.Server;
-    private props: { [key: string]: unknown };
+    private props: { site?: SiteData, [key: string]: unknown };
     private auth: Authenticator;
     private db: DatabaseConnection;
 
@@ -54,8 +63,18 @@ export class Server {
         // Setup
         this.props = props ?? {};
         this.props.env = process.env;
+        this.props.isProd = this.isProd();
         this.props.domain = `http${this.isProd() ? 's' : ''}://${this.isProd() ? 
             `www.${process.env.ROOT_URL}` : `${process.env.DEV_URL}`}`;
+
+        // SiteData
+        this.props.site = {
+            content: {
+                tab: this.props?.site?.content?.tab ?? "Tab Title",
+                header: this.props?.site?.content?.header ?? "Header Title"
+            },
+            links: this.props?.site?.links ?? []
+        }
         
         this.auth = new Authenticator(this);
         this.db = new DatabaseConnection(this);

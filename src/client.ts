@@ -1,7 +1,7 @@
 import { Router } from "express";
 
 import { Server } from './server';
-import { AuthPage, HomePage } from "./pages";
+import { AuthPage, HomePage, ProfilePage } from "./pages";
 
 // Defined Routes
 export const DefaultRoute = (server: Server): Router => {
@@ -21,7 +21,7 @@ export const DefaultRoute = (server: Server): Router => {
     route.get(['/login', '/signup', '/auth'], (req, res) => { res.send(AuthPage(req, res, server.getProps())); });
     route.get(['/logout'], (req, res) => { req.session.destroy((err) => {}); res.redirect('/'); })
 
-    route.get('/profile', (req, res) => { res.send(`profile :: ${JSON.stringify(req.session.user)}`) });
+    route.get('/profile', (req, res) => { res.send(ProfilePage(req, res, server.getProps())); });
     route.get('/live', (req, res) => { res.send('live-page'); });
     route.get('/', (req, res) => { res.send(HomePage(req, res, server.getProps())); });
 

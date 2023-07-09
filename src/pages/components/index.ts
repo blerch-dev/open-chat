@@ -6,20 +6,23 @@ interface bodyOptions {
     transparent?: boolean
 }
 
-export const DefaultLayout = (head: string, body: string, options?: bodyOptions) => `
+export const DefaultLayout = (req: any, res: any, data: any = {}, body: string = "") => `
     <!DOCTYPE html>
     <html lang="en">
         <script> var exports = {}; </script>
-        <head>${head}</head>
-        <body ${options?.transparent ?? false ? 'style="background-color: transparent;"' : ''}>${body}</body>
+        <head>${DefaultHead(data)}</head>
+        <body ${data?.site?.transparent ?? false ? 'style="background-color: transparent;"' : ''}>
+        ${HeaderComponent(req, res, data)}
+        ${body}
+        </body>
     </html>
 `;
 
-export const DefaultHead = (title: string) => `
+export const DefaultHead = (data: any = {}) => `
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/assets/favicon.ico" />
-    <title>${title}</title>
+    <title>${data?.site?.content?.tab ?? "Tab Title"}</title>
     <link rel="stylesheet" href="/css/style.css">
     <script type="module" src="/js/main.js"></script>
 `;
