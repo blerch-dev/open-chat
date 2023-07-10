@@ -4,6 +4,8 @@ import { Server } from './server';
 import { SignUpPage } from './pages';
 import { User, UserData } from './user';
 
+// Redirects are completed before req.session is saved, needs to be fixed
+
 export class Authenticator {
 
     private server: Server;
@@ -14,9 +16,24 @@ export class Authenticator {
         this.debug = debug ?? !this.server.isProd();
     }
 
+    private async waitForSession(req: any, res: any) {
+        let promise = new Promise((resv, rej) => {
+            setTimeout(() => {
+                resv(true);
+            }, 50);
+        });
+
+        return await promise;
+    }
+
     public async handleUserAuth(req: any, res: any, next: any, user: any, userdata: any = {}) {
         if(user instanceof Error) { return res.send(SignUpPage(req, res, this.server.getProps(), userdata)); }
-        user = user as User; req.session.user = user.toJSON(); return res.redirect('/profile');
+        user = user as User; req.session.user = user.toJSON(); 
+        if(await this.waitForSession(req, res)) {
+            return res.redirect('/profile');
+        }
+
+        return res.redirect('/error?session_save=1');
     }
 
     public async createAccount(req: any, res: any, next: any) {
@@ -31,7 +48,7 @@ export class Authenticator {
         if(validNames instanceof Error)
             return res.json({ Error: "Name is already taken." });
 
-        let userdata: UserData = {
+        let userdata = {
             uuid: User.GenerateUUID(),
             name: username ?? null,
             age: Date.now(),
@@ -48,10 +65,17 @@ export class Authenticator {
             }
 
             req.session.user = (user as User).toJSON();
-            return res.json({ Redirect: '/profile' });
+            if(await this.waitForSession(req, res)) {
+                return res.json({ Redirect: '/profile' });
+            }
+    
+            return res.json({ 
+                Error: 'Issue creating session. Contact Mods.', 
+                Code: 0x0102
+            });
         }
 
-        return res.json({ Error: "Issue with generated user info, try again later.", Code: 0x0102 });
+        return res.json({ Error: "Issue with generated user info, try again later.", Code: 0x0103 });
     }
 
     // #region Twitch

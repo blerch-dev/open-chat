@@ -108,6 +108,11 @@ header {
     }
 }
 
+.scroll-box {
+    overflow-y: auto;
+    max-height: 100%;
+}
+
 .hide {
     display: none !important;
 }

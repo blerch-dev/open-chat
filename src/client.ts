@@ -19,7 +19,12 @@ export const DefaultRoute = (server: Server): Router => {
 
     // Page Routes
     route.get(['/login', '/signup', '/auth'], (req, res) => { res.send(AuthPage(req, res, server.getProps())); });
-    route.get(['/logout'], (req, res) => { req.session.destroy((err) => {}); res.redirect('/'); })
+    route.get(['/logout'], (req, res) => { 
+        req.session.destroy((err) => {
+            res.clearCookie('connect.sid'); 
+            res.redirect('/'); 
+        });
+    });
 
     route.get('/profile', (req, res) => { res.send(ProfilePage(req, res, server.getProps())); });
     route.get('/live', (req, res) => { res.send('live-page'); });

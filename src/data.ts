@@ -5,6 +5,9 @@ import { Server } from './server';
 import { sleep } from './tools';
 
 const FormatDBString = (hardFormat = false) => {
+    if(hardFormat)
+        console.log("Forcing Table Drops!");
+
     return `
     ${hardFormat ? 'DROP TABLE IF EXISTS users;' : ''}
     CREATE TABLE IF NOT EXISTS "users" (
@@ -13,7 +16,7 @@ const FormatDBString = (hardFormat = false) => {
         "created_at"    timestamp NOT NULL DEFAULT NOW(),
         "last_login"    timestamp NOT NULL DEFAULT NOW(),
         "roles"         bigint NOT NULL DEFAULT 0,
-        "status"        smallint NOT NULL DEFAULT 1,
+        "valid"         boolean NOT NULL DEFAULT 'yes',
         PRIMARY KEY ("uuid")
     );
 
@@ -45,7 +48,7 @@ const FormatDBString = (hardFormat = false) => {
         "type"                  smallint NOT NULL DEFAULT 0,
         "valid"                 boolean NOT NULL DEFAULT 'yes',
         "created_at"            timestamp NOT NULL DEFAULT NOW(),
-        "expires"               timestamp NOT NULL DEFAULT NOW() + interval '1 day',
+        "expires"               timestamp DEFAULT NOW() + interval '1 day',
         "notes"                 text,
         PRIMARY KEY ("id")
     );
@@ -107,13 +110,14 @@ export class DatabaseConnection {
         let query = `
             SELECT users.*,
             to_json(user_connections.*) as connections,
-            json_agg(DISTINCT user_status_effects.*) as records
+            array_agg(to_json(user_status_effects.*)) as records
             FROM users
             LEFT JOIN user_connections ON users.uuid = user_connections.user_id
             LEFT JOIN user_status_effects ON users.uuid = user_status_effects.user_id
                 AND user_status_effects.valid = 'yes'
                 AND user_status_effects.expires > CURRENT_TIMESTAMP
             ${str}
+            GROUP BY users.uuid, user_connections.*;
         `;
 
         return this.queryDB(query, ...vals);
@@ -131,7 +135,8 @@ export class DatabaseConnection {
     // #region User
     private validUser(data: UserData | any = {}): User | Error {
         data.age = (new Date(data.created_at)).getTime();
-        console.log("Valid User Records:", data.records); // format times
+        data.status = [...data.records].reduce((pv, cv) => pv | cv.type, 0);
+        //console.log("Valid User Records:", data); // format times
         return User.ValidUserData(data) ? new User(data) : Error("Invalid User Data.");
     }
 

@@ -1,6 +1,4 @@
 const { DatabaseConnection } = require('./build/data');
-const { Server } = require('./build/server');
-
-DatabaseConnection.FormatDatabase().then(() => {
+DatabaseConnection.FormatDatabase(process.argv.includes('-f')).then(() => {
     process.exit();
 });

@@ -142,18 +142,16 @@ export const ProfilePage = (req: any, res: any, data: any = {}) => {
                     <h4>Roles:</h4>
                     <p>role placeholder</p>
                 </span>
+                <span>
+                    <h4>Status:</h4>
+                    <p>status placeholder</p>
+                </span>
             </span>
         <div>
         <div>
             <h2>Connections</h2>
             <span class="profile-card">
                 <p>connection placeholder</p>
-            </span>
-        </div>
-        <div>
-            <h2>Channels</h2>
-            <span class="profile-card">
-                    <h4>Channels TODO</h4>
             </span>
         </div>
     </div>
@@ -172,7 +170,9 @@ export const ProfilePage = (req: any, res: any, data: any = {}) => {
                 </span>
             </div>
         </nav>
-        ${content}
+        <div class="scroll-box">
+            ${content}
+        </div>
     </main>
     `;
 

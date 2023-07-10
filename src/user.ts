@@ -54,11 +54,12 @@ export interface UserRecord {
 export interface UserData {
     uuid: string,
     name: string,
-    roles?: number,
-    status?: number,
-    age?: number,
-    connections?: UserConnection | UserConnectionDB,
-    records?: UserRecord[]
+    roles: number,
+    valid: boolean,
+    status: number,
+    age: number,
+    connections: UserConnection | UserConnectionDB,
+    records: UserRecord[]
 }
 
 export interface UserConnection {
@@ -79,17 +80,18 @@ export interface UserConnectionDB {
 
 export class User {
     static GenerateUUID() { return uuidv4(); }
-    static ValidUserData(data: UserData) {
+    static ValidUserData(data: UserData | any) {
         return data?.uuid && data?.name;
     }
 
-    private data: UserData = { uuid: "", name: "" }
+    private data: UserData;
 
-    constructor(data?: UserData) {
+    constructor(data?: UserData | any) {
         this.data = {
             uuid: data?.uuid ?? "",
             name: data?.name ?? "",
             roles: data?.roles ?? 0,
+            valid: data?.valid ?? true,
             status: data?.status ?? 0,
             age: data?.age ?? Date.now(),
             connections: (data?.connections as UserConnectionDB)?.user_id ? {
@@ -113,6 +115,7 @@ export class User {
     public toJSON() { return this.data; }
     public getUUID() { return this.data.uuid; }
     public getName() { return this.data.name; }
+    public getAge() { return Date.now() - this.data.age; }
     public getRoles() {
         let keys = Object.keys(Roles); let roles = [];
         for(let i = 0; i < keys.length; i++) {

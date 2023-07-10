@@ -1,6 +1,7 @@
 // Backend
 import http from 'http';
 import path from 'path';
+import cors from 'cors';
 import express, { Router } from 'express';
 import bodyParser from 'body-parser';
 import session from 'express-session';
@@ -86,6 +87,16 @@ export class Server {
         this.app.use(cookieParser());
         this.app.enable('trust proxy');
 
+        const corsOptions = {
+            origin: (origin: any, callback: any) => {
+                let whitelist = ['localhost', process.env.DEV_URL, process.env.ROOT_URL];
+                // whitelist.indexOf(origin) // is whitelist hostname is in origin allow
+                callback(null, true);
+            }
+        }
+
+        this.app.use(cors(corsOptions))
+
         const ttl = (1000 * 60 * 60 * 24); // 1 day session
         this.redis.client = new RedisClient(); // Local Only
         this.redis.store = new RedisStore({ 
@@ -113,7 +124,7 @@ export class Server {
 
         // Auto Handles
         this.app.use('*', (req, res, next) => {
-            //console.log("Session:", req.session);
+            console.log("Session User:", req.session?.cookie?.expires, ' - ', req.originalUrl, ' | ', req.cookies?.['connect.sid']);
             if(req.session?.user == undefined && req.cookies.ssi) {
                 res.cookie('ssi_forward', req.protocol + '://' + req.hostname + req.originalUrl);
                 console.log("Placed Headers:", res.getHeader("set-cookie"));
