@@ -1,7 +1,7 @@
 import { google } from 'googleapis';
 
 import { Server } from './server';
-import { SignUpPage } from './pages';
+import { ErrorPage, SignUpPage, ValidAuthPage } from './pages';
 import { User, UserData } from './user';
 
 // Redirects are completed before req.session is saved, needs to be fixed
@@ -17,23 +17,20 @@ export class Authenticator {
     }
 
     private async waitForSession(req: any, res: any) {
-        let promise = new Promise((resv, rej) => {
-            setTimeout(() => {
-                resv(true);
-            }, 50);
-        });
-
-        return await promise;
+        // any checks needed
+        return true;
     }
 
     public async handleUserAuth(req: any, res: any, next: any, user: any, userdata: any = {}) {
         if(user instanceof Error) { return res.send(SignUpPage(req, res, this.server.getProps(), userdata)); }
-        user = user as User; req.session.user = user.toJSON(); 
+        user = user as User; req.session.user = user.toJSON();
         if(await this.waitForSession(req, res)) {
-            return res.redirect('/profile');
+            return res.send(ValidAuthPage(req, res, this.server.getProps(), user.getName()));
         }
 
-        return res.redirect('/error?session_save=1');
+        return res.send(ErrorPage(req, res, this.server.getProps(), {
+            Message: "Failed to Auth User.", Code: 0x0104
+        }))
     }
 
     public async createAccount(req: any, res: any, next: any) {

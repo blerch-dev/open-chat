@@ -189,3 +189,35 @@ export const ChatPage = (req: any, res: any, data: any = {}) => {
     `);
 }
 
+export const ValidAuthPage = (req: any, res: any, data: any = {}, username: string = "") => {
+    let page = `
+    <main>
+        <span>
+            <h1>Successful Auth</h1>
+            <p>Redirecting to Profile...</p>
+        </span>
+    </main>
+    <script>
+        setTimeout(() => { window.location.href = '/profile'; }, 1000);
+    </script>
+    `
+
+    return DefaultLayout(req, res, data, `
+        ${page}
+    `);
+}
+
+export const ErrorPage = (req: any, res: any, data: any = {}, error: { Message?: string, Code?: number } = {}) => {
+    let page = `
+    <main>
+        <span>
+            <h1>Error</h1>
+            <p>${error?.Code ?? '0x0'} - ${error?.Message ?? "No Error Message..."}</p>
+        </span>
+    </main>
+    `
+
+    return DefaultLayout(req, res, data, `
+        ${page}
+    `);
+}

@@ -13,8 +13,8 @@ const FormatDBString = (hardFormat = false) => {
     CREATE TABLE IF NOT EXISTS "users" (
         "uuid"          uuid UNIQUE NOT NULL,
         "name"          varchar(32) UNIQUE NOT NULL,
-        "created_at"    timestamp NOT NULL DEFAULT NOW(),
-        "last_login"    timestamp NOT NULL DEFAULT NOW(),
+        "created_at"    timestamp without time zone NOT NULL DEFAULT NOW(),
+        "last_login"    timestamp without time zone NOT NULL DEFAULT NOW(),
         "roles"         bigint NOT NULL DEFAULT 0,
         "valid"         boolean NOT NULL DEFAULT 'yes',
         PRIMARY KEY ("uuid")
@@ -37,7 +37,7 @@ const FormatDBString = (hardFormat = false) => {
         "user_id"               uuid NOT NULL,
         "selector"              varchar(12) NOT NULL,
         "hashed_validator"      varchar(128) NOT NULL,
-        "expires"               timestamp NOT NULL,
+        "expires"               timestamp without time zone NOT NULL,
         PRIMARY KEY ("selector")
     );
 
@@ -47,8 +47,8 @@ const FormatDBString = (hardFormat = false) => {
         "user_id"               uuid NOT NULL,
         "type"                  smallint NOT NULL DEFAULT 0,
         "valid"                 boolean NOT NULL DEFAULT 'yes',
-        "created_at"            timestamp NOT NULL DEFAULT NOW(),
-        "expires"               timestamp DEFAULT NOW() + interval '1 day',
+        "created_at"            timestamp without time zone NOT NULL DEFAULT NOW(),
+        "expires"               timestamp without time zone DEFAULT NOW() + interval '1 day',
         "notes"                 text,
         PRIMARY KEY ("id")
     );
@@ -135,8 +135,14 @@ export class DatabaseConnection {
     // #region User
     private validUser(data: UserData | any = {}): User | Error {
         data.age = (new Date(data.created_at)).getTime();
+
+        let records = data.records.filter((val: any) => val != null);
+        data.records = records.filter((val: any) => { 
+            let expired = (new Date(val.expires ?? Date.now())).getTime() < Date.now();
+            return !expired;
+        });
+
         data.status = [...data.records].reduce((pv, cv) => pv | cv.type, 0);
-        //console.log("Valid User Records:", data); // format times
         return User.ValidUserData(data) ? new User(data) : Error("Invalid User Data.");
     }
 

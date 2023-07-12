@@ -83,6 +83,14 @@ export class User {
     static ValidUserData(data: UserData | any) {
         return data?.uuid && data?.name;
     }
+    static ValidateUserData(data: UserData) {
+        if(!data)
+            return undefined;
+
+        data.records = data?.records?.filter((val) => val.expires <= Date.now()) ?? undefined;
+        data.status = [...data?.records]?.reduce((pv, cv) => pv | cv.type, 0) ?? undefined;
+        return data;
+    }
 
     private data: UserData;
 

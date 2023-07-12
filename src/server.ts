@@ -16,6 +16,7 @@ import { RedisClient } from './state';
 import { Authenticator } from './auth';
 import { DatabaseConnection } from './data';
 import { DefaultRoute } from './client';
+import { User, UserData } from './user';
 
 export class Resource {
     static State = `${process.env.STATE_SUB}.${process.env.ROOT_URL}`;
@@ -88,11 +89,7 @@ export class Server {
         this.app.enable('trust proxy');
 
         const corsOptions = {
-            origin: (origin: any, callback: any) => {
-                let whitelist = ['localhost', process.env.DEV_URL, process.env.ROOT_URL];
-                // whitelist.indexOf(origin) // is whitelist hostname is in origin allow
-                callback(null, true);
-            }
+            origin: ['http://localhost:8000', 'http://' + process.env.DEV_URL, 'https://' + process.env.ROOT_URL]
         }
 
         this.app.use(cors(corsOptions))
@@ -124,7 +121,8 @@ export class Server {
 
         // Auto Handles
         this.app.use('*', (req, res, next) => {
-            console.log("Session User:", req.session?.cookie?.expires, ' - ', req.originalUrl, ' | ', req.cookies?.['connect.sid']);
+            req.session.user = User.ValidateUserData(req?.session?.user as UserData);
+            // console.log("Session User:", req.session?.cookie?.expires, ' - ', req.originalUrl, ' | ', req.cookies?.['connect.sid']);
             if(req.session?.user == undefined && req.cookies.ssi) {
                 res.cookie('ssi_forward', req.protocol + '://' + req.hostname + req.originalUrl);
                 console.log("Placed Headers:", res.getHeader("set-cookie"));
