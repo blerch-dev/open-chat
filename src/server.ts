@@ -34,7 +34,8 @@ declare module "express-session" {
 export interface SiteData {
     content?: {
         tab?: string,
-        header?: string
+        header?: string,
+        chat?: string
     }
     links?: { link: string, label: string }[],
     transparent?: boolean
@@ -42,6 +43,7 @@ export interface SiteData {
 
 export class Server {
 
+    public getSession: (req: any) => Promise<unknown>;
     public getProps = () => { return this.props; }
     public getApp = () => { return this.app; }
     public getListener: () => Promise<http.Server> = async () => { 
@@ -140,6 +142,16 @@ export class Server {
 
         // Listener
         this.server = this.app.listen(props?.port ?? process.env.SERVER_PORT ?? 8000);
+
+        // Retrieve Session
+        this.getSession = async (req: any) => {
+            return new Promise((res, rej) => {
+                sessionParser(req, {} as any, () => {
+                    if(req?.session) { return res(req.session); }
+                    return rej();
+                });
+            });
+        }
     }
 
     public getAuthenticator() { return this.auth; }

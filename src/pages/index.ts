@@ -2,8 +2,15 @@ import path from 'path';
 import * as dotenv from 'dotenv';
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
-import { DefaultHead, DefaultLayout, HeaderComponent } from './components';
-import { Roles } from '../user';
+import { 
+    DefaultHead, 
+    DefaultLayout, 
+    MinimumLayout, 
+    HeaderComponent, 
+    ChatComponent, 
+    EmbedComponent 
+} from './components';
+import { Roles } from '../user'; // Might move all user needs to components
 
 // Need to Formalize Data
 
@@ -181,14 +188,6 @@ export const ProfilePage = (req: any, res: any, data: any = {}) => {
     `);
 }
 
-export const ChatPage = (req: any, res: any, data: any = {}) => {
-    let page = ``;
-
-    return DefaultLayout(req, res, data, `
-        ${page}
-    `);
-}
-
 export const ValidAuthPage = (req: any, res: any, data: any = {}, username: string = "") => {
     let page = `
     <main>
@@ -220,4 +219,21 @@ export const ErrorPage = (req: any, res: any, data: any = {}, error: { Message?:
     return DefaultLayout(req, res, data, `
         ${page}
     `);
+}
+
+export const LivePage = (req: any, res: any, data: any = {}, options: any = {}) => {
+    let page = `
+        <main class="live-page">
+            ${EmbedComponent(data, options)}
+            ${ChatComponent(data, options)}
+        </main>
+    `;
+
+    return DefaultLayout(req, res, data, `
+        ${page}
+    `);
+}
+
+export const ChatPage = (req: any, res: any, data: any = {}, options: any = {}) => {
+    return MinimumLayout(req, res, data, `${ChatComponent(data, options)}`);
 }

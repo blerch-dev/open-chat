@@ -18,6 +18,16 @@ export const DefaultLayout = (req: any, res: any, data: any = {}, body: string =
     </html>
 `;
 
+export const MinimumLayout = (req: any, res: any, data: any = {}, body: string = "") => `
+    <!DOCTYPE html>
+    <html lang="en">
+        <head>${DefaultHead(data)}</head>
+        <body ${data?.site?.transparent ?? false ? 'style="background-color: transparent;"' : ''}>
+            ${body}
+        </body>
+    </html>
+`;
+
 export const DefaultHead = (data: any = {}) => `
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />

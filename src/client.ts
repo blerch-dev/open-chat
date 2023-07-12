@@ -1,7 +1,7 @@
 import { Router } from "express";
 
 import { Server } from './server';
-import { AuthPage, HomePage, ProfilePage } from "./pages";
+import { AuthPage, HomePage, LivePage, ProfilePage } from "./pages";
 
 // Defined Routes
 export const DefaultRoute = (server: Server): Router => {
@@ -17,6 +17,9 @@ export const DefaultRoute = (server: Server): Router => {
     route.get('/auth/youtube', (req, res, next) => { auth.authYoutube(req, res, next) });
     route.get('/verify/youtube', (req, res, next) => { auth.verifyYoutube(req, res, next) });
 
+    // Dev Routes
+    //if(!server.isProd()) { route.get('/chatwindow', (req, res, next) => {  }) }
+
     // Page Routes
     route.get(['/login', '/signup', '/auth'], (req, res) => { res.send(AuthPage(req, res, server.getProps())); });
     route.get(['/logout'], (req, res) => { 
@@ -27,7 +30,7 @@ export const DefaultRoute = (server: Server): Router => {
     });
 
     route.get('/profile', (req, res) => { res.send(ProfilePage(req, res, server.getProps())); });
-    route.get('/live', (req, res) => { res.send('live-page'); });
+    route.get('/live', (req, res) => { res.send(LivePage(req, res, server.getProps(), {})); }); // ChatOptions
     route.get('/', (req, res) => { res.send(HomePage(req, res, server.getProps())); });
 
     return route;

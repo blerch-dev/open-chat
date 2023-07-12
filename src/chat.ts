@@ -73,7 +73,9 @@ export class ChatHandler {
 
         // Establish WS, Use This Server for Listener
         this.configureServer();
-        server.getListener().then((listener) => { listener.on('upgrade', this.handleUpgrade); });
+        server.getListener().then((listener) => { 
+            listener.on('upgrade', (...args) => { this.handleUpgrade(...args); }); 
+        });
     }
 
     private async handleUpgrade(request: any, socket: any, head: any) {
@@ -81,7 +83,7 @@ export class ChatHandler {
     }
 
     private configureServer() {
-        this.wss.on("connection", this.onConnection);
+        this.wss.on("connection", (...args) => { this.onConnection(...args) });
     }
 
     private addSocketToConnectionsList(socket: WebSocket.WebSocket, user: User | null = null) {
@@ -100,16 +102,18 @@ export class ChatHandler {
 
     private async onConnection(socket: WebSocket.WebSocket, req: any) {
         // Session
-        console.log("WebSocket Connection Session:", req.session);
+        let user = req?.session?.user ?? await this.server?.getSession(req) ?? {};
 
         // Add to UserSockets
-        if(User.ValidUserData(req.session.user)) {
+        if(User.ValidUserData(user)) {
             // Valid User
-            this.addSocketToConnectionsList(socket, new User(req.session.user));
+            this.addSocketToConnectionsList(socket, new User(user));
         } else {
             // Anon User
             this.addSocketToConnectionsList(socket);
         }
+
+        // Ban/Mute Check
 
         (socket as any).isAlive = true;
         (socket as any).hb = setInterval(() => {

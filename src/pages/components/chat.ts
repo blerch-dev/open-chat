@@ -6,7 +6,7 @@ interface chatOptions {
     controls?: boolean
 }
 
-export const ChatComponent = (title: string, options?: chatOptions) => {
+export const ChatComponent = (data: any = {}, options: chatOptions = {}) => {
     let cv = 0;
     const getNV = (sv?: number) => { if(sv != undefined) { cv = sv; } return ('0' + cv++).slice(-2) }
     return `
@@ -16,7 +16,7 @@ export const ChatComponent = (title: string, options?: chatOptions) => {
         data-link="${options?.directLink ?? ''}"
     >
         <header>
-            <h4>${title}</h4>
+            <h4>${data?.content?.chat ?? ""}</h4>
             <div class="chat-controls">
                 <span tabindex="2${getNV(0)}" id="ChatSettingsButton"><img style="width: 16px;" src="/assets/settings.svg"></span>
                 ${options?.controls === false ? '' : `
