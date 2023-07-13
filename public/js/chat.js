@@ -132,10 +132,13 @@ function ConfigureChat(chat, input, submit) {
     }
 
     const chatMessage = (json) => {
-        const badges = () => {
-            //<img class="user-badge" src="${msg.roles[0].icon}" title="${msg.roles[0].name}">
-            // for each badge ^
-            return '';
+        const badges = (roles) => {
+            let badgeStr = "";
+            for(let i = 0; i < roles.length; i++) {
+                badgeStr += `<img class="user-badge" src="${msg.roles[0].icon}" title="${msg.roles[0].name}"></img>`
+            }
+
+            return badgeStr;
         }
 
         let msg = json.ChatMessage;
@@ -145,7 +148,7 @@ function ConfigureChat(chat, input, submit) {
         elem.innerHTML = `
             <p>
                 <span class="user-tag" style="color: ${msg.roles[0]?.color ?? '#ffffff'}">
-                    ${badges()}
+                    ${badges(msg.roles)}
                     ${msg.username}</span>:
                 ${msg.message}
             </p>

@@ -43,7 +43,7 @@ export interface SiteData {
 
 export class Server {
 
-    public getSession: (req: any) => Promise<unknown>;
+    public getSession: (req: any) => Promise<any>;
     public getProps = () => { return this.props; }
     public getApp = () => { return this.app; }
     public getListener: () => Promise<http.Server> = async () => { 
@@ -144,7 +144,7 @@ export class Server {
         this.server = this.app.listen(props?.port ?? process.env.SERVER_PORT ?? 8000);
 
         // Retrieve Session
-        this.getSession = async (req: any) => {
+        this.getSession = async (req: any): Promise<any> => {
             return new Promise((res, rej) => {
                 sessionParser(req, {} as any, () => {
                     if(req?.session) { return res(req.session); }
@@ -156,4 +156,5 @@ export class Server {
 
     public getAuthenticator() { return this.auth; }
     public getDatabaseConnection() { return this.db; }
+    public getRedisClient() { return this.redis.client; }
 }

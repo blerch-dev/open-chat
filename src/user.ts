@@ -80,7 +80,8 @@ export interface UserConnectionDB {
 
 export class User {
     static GenerateUUID() { return uuidv4(); }
-    static ValidUserData(data: UserData | any) {
+    static ValidUserData(data: UserData | User | any) {
+        if(data instanceof User) { return data; }
         return data?.uuid && data?.name;
     }
     static ValidateUserData(data: UserData) {
