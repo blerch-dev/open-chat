@@ -122,14 +122,15 @@ export class Server {
         this.app.use(sessionParser);
 
         // Auto Handles
-        this.app.use('*', (req, res, next) => {
+        this.app.use('*', async (req, res, next) => {
             req.session.user = User.ValidateUserData(req?.session?.user as UserData);
-            // console.log("Session User:", req.session?.cookie?.expires, ' - ', req.originalUrl, ' | ', req.cookies?.['connect.sid']);
+            // Check if Redis needs user to update from db
+
             if(req.session?.user == undefined && req.cookies.ssi) {
-                res.cookie('ssi_forward', req.protocol + '://' + req.hostname + req.originalUrl);
-                console.log("Placed Headers:", res.getHeader("set-cookie"));
+                // use ssi cookie to create new session, forward after user session is set
             }
 
+            // console.log("Session User:", req.session?.cookie?.expires, ' - ', req.originalUrl, ' | ', req.cookies?.['connect.sid']);
             return next();
         });
 
@@ -141,14 +142,17 @@ export class Server {
         for(let i = 0; i < routes.length ?? []; i++) { this.addRoute(routes[i]); }
 
         // Listener
-        this.server = this.app.listen(props?.port ?? process.env.SERVER_PORT ?? 8000);
+        let port = props?.port ?? process.env.SERVER_PORT ?? 8000;
+        this.server = this.app.listen(port, () => {
+            console.log(`Listening on Port: ${port}`);
+        });
 
         // Retrieve Session
         this.getSession = async (req: any): Promise<any> => {
             return new Promise((res, rej) => {
                 sessionParser(req, {} as any, () => {
                     if(req?.session) { return res(req.session); }
-                    return rej();
+                    return res(Error("Could not find session."));
                 });
             });
         }

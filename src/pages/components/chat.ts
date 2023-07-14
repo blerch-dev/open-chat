@@ -16,12 +16,12 @@ export const ChatComponent = (data: any = {}, options: chatOptions = {}) => {
         data-link="${options?.directLink ?? ''}"
     >
         <header>
-            <h4>${data?.content?.chat ?? ""}</h4>
+            <h4 id="ChatStatus">${data?.content?.chat ?? ""}</h4>
             <div class="chat-controls">
-                <span tabindex="2${getNV(0)}" id="ChatSettingsButton"><img style="width: 16px;" src="/assets/settings.svg"></span>
+                <span tabindex="2${getNV(0)}" id="ChatSettingsButton"><img style="width: 16px;" src="/assets/icons/settings.svg"></span>
                 ${options?.controls === false ? '' : `
-                    <span tabindex="2${getNV()}" id="ChatPopoutButton"><img src="/assets/popout.svg"></span>
-                    <span tabindex="2${getNV()}" id="ChatCloseButton"><img src="/assets/exit.svg"></span>
+                    <span tabindex="2${getNV()}" id="ChatPopoutButton"><img src="/assets/icons/popout.svg"></span>
+                    <span tabindex="2${getNV()}" id="ChatCloseButton"><img src="/assets/icons/exit.svg"></span>
                 `}
             </div>
         </header>
@@ -29,7 +29,7 @@ export const ChatComponent = (data: any = {}, options: chatOptions = {}) => {
         <main class="no-scrollbar" style="padding: 0px;">
             <div id="ChatMessageList" data-tab="4"></div>
             <form id="ChatSettings" class="hide">
-                <h4>Settings Page</h4>
+                ${ChatSettingsPage()}
             </form>
         </main>
         <span id="FillList" class="no-scrollbar" data-tab="5"></span>
@@ -40,3 +40,29 @@ export const ChatComponent = (data: any = {}, options: chatOptions = {}) => {
         <script type="module" src="/js/chat.js"></script>
     </div>
 `};
+
+export const ChatSettingsPage = () => {
+    return `
+    <h4>Settings Page</h4>
+    ${ChatSettingsGroup("Advanced Settings", "dev", `
+        <span class="chat-settings-input-group" data-sync="debug">
+            <label for="dev-debug">Debug</label>
+            <input type="checkbox" id="dev-debug" name="dev-debug" data-click="sync-data">
+        </span>
+    `)}
+    `;
+}
+
+export const ChatSettingsGroup = (name: string, group: string, body: string) => {
+    return `
+    <div class="chat-settings-group" data-sync="${group}">
+        <span class="chat-settings-group-label" data-click="toggle-settings-group">
+            <img src="/assets/icons/drop.svg">
+            <h4>${name}</h4>
+        </span>
+        <div class="chat-settings-group-body">
+            ${body}
+        </div>
+    </div>
+    `;
+}

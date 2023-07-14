@@ -1,14 +1,23 @@
 import WebSocket from 'ws';
 
 import { Server } from "./server";
-import { User, /* RoleValue, */ RoleInterface, Status, UserData } from './user';
+import { User, RoleValue, RoleInterface, Status, UserData } from './user';
 
-export class ChatMessage {
-
-    //private chatter: Chatter | null = null;
-    //private message: string | null = null;
-
-    constructor() {}
+// Here for Type Checking
+export interface ChatMessage {
+    ServerMessage?: { 
+        message: string, 
+        icon: string, 
+        status?: number, 
+        code?: string 
+    }, // more to add
+    EventMessage?: any, // to define
+    MessageQueue?: string[],
+    ChatMessage?: {
+        username: string,
+        message: string,
+        roles: RoleInterface[]
+    }
 }
 
 export class Chatter {
@@ -67,9 +76,14 @@ export class ChatHandler {
         noServer: true
     });
 
+    private HistoryLength = 30;
+    private ChatHistory: string[] = [];
     private UserSockets = new Map<string, SocketConnection>();
     private publisher;
     private subscriber;
+
+    // Save to Text File
+    private BannedPhrases: string[] = [];
 
     constructor(server: Server, props?: { [key: string]: unknown }) {
         this.server = server;
@@ -91,6 +105,7 @@ export class ChatHandler {
 
     private configureServer() {
         this.subscriber?.on("message", (channel, message) => {
+            if(this.ChatHistory.unshift(message) > this.HistoryLength) { this.ChatHistory.pop(); }
             this.boradcast(message);
         });
 
@@ -124,17 +139,23 @@ export class ChatHandler {
 
     private async onConnection(socket: WebSocket.WebSocket, req: any) {
         // Session
-        let user: User = req?.session?.user ?? (await this.server?.getSession(req))?.user ?? {};
+        let userdata: UserData = req?.session?.user ?? (await this.server?.getSession(req))?.user ?? {};
+        let user: User;
 
         // Add to UserSockets
-        if(User.ValidUserData(user)) {
+        if(User.ValidUserData(userdata)) {
             // Valid User
-            user = user instanceof User ? user : new User(user);
+            user = new User(userdata);
+            let stat = user.getEffectiveStatus()
 
             // Ban Check
-            if(user.getEffectiveStatus() & Status.BANNED) {
+            if(stat & Status.BANNED) {
                 socket.send(JSON.stringify({ 
-                    ServerMessage: { message: 'You are still banned, try again later.' }
+                    ServerMessage: { 
+                        message: 'You are still banned, try again later.',
+                        status: stat,
+                        code: 0x000
+                    }
                 }));
 
                 return socket.close();
@@ -145,8 +166,11 @@ export class ChatHandler {
             socket.send(JSON.stringify({
                 ServerMessage: {
                     message: `Connected to Chat as ${user.getName()}.`,
-                    icon: '/assets/info.svg'
-                }
+                    icon: '/assets/icons/info.svg',
+                    status: stat,
+                    code: 0x001
+                },
+                MessageQueue: this.ChatHistory
             }));
         } else {
             // Anon User
@@ -155,7 +179,8 @@ export class ChatHandler {
             socket.send(JSON.stringify({
                 ServerMessage: {
                     message: `Connected to Chat Anonymously.`,
-                    icon: '/assets/info.svg'
+                    icon: '/assets/info.svg',
+                    code: 0x001
                 }
             }));
         }
@@ -173,7 +198,7 @@ export class ChatHandler {
 
         // Message
         const onJSON = (json: { message: string }) => {
-            // Detect Command: Check User Roles/Status/Event State
+            CommandHandle(json.message);
             const msg = JSON.stringify({
                 ChatMessage: {
                     username: user.getName(),
@@ -183,6 +208,11 @@ export class ChatHandler {
             });
 
             this.publisher?.publish(`chat|msg`, msg);
+        }
+
+        const CommandHandle = (msg: string) => {
+            // Detect Command: Check User Roles/Status/Event State
+                // Do Command if Valid
         }
 
         socket.on("message", (message) => {

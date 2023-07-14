@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById("ChatInput");
     const submit = document.getElementById("ChatSend");
     const settings = document.getElementById("ChatSettings");
+    const status = document.getElementById("ChatStatus");
 
     const getValue = () => {
         let msg = input.value;
@@ -60,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
         getValue();
     });
 
-    ConfigureChat(chat, input, submit);
+    ConfigureChat(frame, chat, input, submit, settings, status);
 
     document.addEventListener('click', (e) => {
         switch(e.target.id) {
@@ -71,6 +72,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 RemoveChat(1000); break;
             case "ChatCloseButton":
                 RemoveChat(1001); break;
+            default:
+                break;
+        }
+
+        if(e.target.dataset) { console.log("Dataset:", e.target.dataset); }
+        switch(e.target.dataset) {
+            case "toggleSettingsGroup":
+                e.target.firstChild.classList.toggle('closed');
+                e.target.nextSibling.classList.toggle('hide');
+                break;
             default:
                 break;
         }
@@ -89,12 +100,48 @@ document.addEventListener('DOMContentLoaded', () => {
     const SaveSettings = () => {
         // configure settings on change
     }
+
+    const LoadSettings = () => {
+        let str = localStorage.getItem("chatSettings") ?? null, json = {};
+        if(typeof(str) === 'string') { json = JSON.parse(str); }
+        return GetAllDataSyncFields(json);
+    }
+
+    const GetAllDataSyncFields = (defaultValues) => {
+        // Broken, Almost there
+        const getChildFields = (target, previousField = undefined) => {
+            let elems = target.children, data = {};
+            if(elems.length > 0) { console.log(`Searching Through ${elems.length} Element${elems.length > 1 ? 's' : ''}`) }
+            for(let i = 0; i < elems.length; i++) {
+                let field = elems[i]?.dataset?.sync, elem = elems[i];
+                console.log("Current Elem Dataset:", field, previousField, elem.dataset.click);
+                if(!field && elem.children.length == 0)
+                    continue;
+
+                let nextField = field ?? previousField;
+                if(field) {
+                    if(elem.dataset.click == "syncData") {
+                        console.log(' -> Returning Value', defaultValues[field] ?? null);
+                        return defaultValues[field] ?? null;
+                    } else {
+                        field = field ?? previousField
+                        data[field] = getChildFields(elem, nextField);
+                    }
+                }
+            }
+            return data;
+        }
+
+        return getChildFields(settings);
+    }
+
+    console.log("Load Settings:", LoadSettings());
     
     const RemoveChat = (code) => { if(frame instanceof Element) { frame.classList.add('hide'); } ChatConnection.disconnect(code); }
 });
 
 const ChatConnection = new ChatSocket(window.location);
-function ConfigureChat(chat, input, submit) {
+function ConfigureChat(frame, chat, input, submit, settings, status) {
     const secure = window.location.protocol === 'https:';
     const local = window.location.hostname.includes('localhost');
     const url = `${local ? '' : 'chat.'}${window.location.host.split(".").slice(-2).join(".")}`;
@@ -117,7 +164,7 @@ function ConfigureChat(chat, input, submit) {
 
     let even = true;
     const onMessage = (json) => {
-        //console.log("JSON:", json);
+        console.log("JSON:", json);
         if(json.ServerMessage && !ChatConnection.embed)
             serverMessage(json);
 
@@ -158,6 +205,12 @@ function ConfigureChat(chat, input, submit) {
     }
 
     const serverMessage = (json) => {
+        let code = json.ServerMessage?.code;
+        if(typeof(code) === 'number') {
+            if(code === 1) { status.textContent = "Connected" }
+            else { status.textContent = "" }
+        }
+
         let msg = json.ServerMessage;
         let elem = document.createElement('div');
         elem.classList.add('server-message');

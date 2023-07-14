@@ -114,7 +114,7 @@
                 width: 100%;
                 overflow: hidden;
                 padding: 4px 6px;
-                background-color: #ffffff16;
+                background-color: #ffffff12;
 
                 & > p {
                     overflow: hidden;
@@ -124,14 +124,70 @@
             }
         }
 
-        & > form {
+        #ChatSettings {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
             width: 100%;
             height: 100%;
             position: absolute;
-            padding: 8px;
+            padding: 5px;
             display: flex;
             flex-direction: column;
             background-color: var(--page-bg);
+        
+            div {
+                display: flex;
+                flex-direction: column;
+                width: 100%;
+            }
+        
+            span {
+                display: flex;
+                flex-direction: row;
+                width: 100%;
+                align-items: center;
+        
+                img {
+                    padding-right: 8px;
+                    height: 7px;
+                    transform: none;
+                    transition: transform 0.2s;
+        
+                    &.closed {
+                        transform: rotateZ(-90deg) translateX(2px);
+                    }
+                }
+            }
+        
+            .chat-settings-group {
+                padding: 5px;
+                background-color: #ffffff08;
+                border-radius: 5px;
+            }
+        
+            .chat-settings-group-label {
+                padding: 0px 4px;
+            }
+        
+            .chat-settings-group-body {
+                padding-top: 5px;
+                gap: 4px;
+            }
+        
+            .chat-settings-input-group {
+                justify-content: space-between;
+
+                label {
+                    flex: 1;
+                    cursor: pointer;
+                }
+
+                input {
+                    flex: 0;
+                    cursor: pointer;
+                }
+            }
         }
     }
 
