@@ -44,18 +44,18 @@ export const ChatComponent = (data: any = {}, options: chatOptions = {}) => {
 export const ChatSettingsPage = () => {
     return `
     <h4>Settings Page</h4>
-    ${ChatSettingsGroup("Advanced Settings", "dev", `
-        <span class="chat-settings-input-group" data-sync="debug">
+    ${ChatSettingsGroup("Advanced Settings", `
+        <span class="chat-settings-input-group">
             <label for="dev-debug">Debug</label>
-            <input type="checkbox" id="dev-debug" name="dev-debug" data-click="sync-data">
+            <input type="checkbox" id="dev-debug" name="dev-debug" data-sync data-click="sync-data">
         </span>
     `)}
     `;
 }
 
-export const ChatSettingsGroup = (name: string, group: string, body: string) => {
+export const ChatSettingsGroup = (name: string, body: string) => {
     return `
-    <div class="chat-settings-group" data-sync="${group}">
+    <div class="chat-settings-group">
         <span class="chat-settings-group-label" data-click="toggle-settings-group">
             <img src="/assets/icons/drop.svg">
             <h4>${name}</h4>

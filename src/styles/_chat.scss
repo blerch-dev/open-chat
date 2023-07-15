@@ -57,11 +57,11 @@
             }
 
             & > span.negative {
-                background-color: #910000;
+                background-color: #c9060677;
             }
 
             & > span.negative:hover {
-                background-color: #e40404;
+                background-color: #c90606;
             }
         }
     }
@@ -151,7 +151,7 @@
                 img {
                     padding-right: 8px;
                     height: 7px;
-                    transform: none;
+                    transform: translateX(2px);
                     transition: transform 0.2s;
         
                     &.closed {
@@ -168,6 +168,12 @@
         
             .chat-settings-group-label {
                 padding: 0px 4px;
+                cursor: pointer;
+
+                * {
+                    pointer-events: none;
+                    user-select: none;
+                }
             }
         
             .chat-settings-group-body {

@@ -1,6 +1,11 @@
+// TODO - Page Managment (Possible Mod Support Enabler)
+class PageManager {
+    constructor() {}
+}
+
 class ChatSocket {
     constructor(loc) {
-        //console.log("Loaded:", loc); // Should do maps here
+        //Log("Loaded:", loc); // Should do maps here
         this.loc = loc;
         this.embed = loc?.pathname?.indexOf('/embed') >= 0 ?? false;
 
@@ -26,7 +31,7 @@ class ChatSocket {
             return;
         
         this.socket.send(JSON.stringify({ message: value }));
-        //console.log("Send Value:", value);
+        //Log("Send Value:", value);
     };
 
     on(event, callback) {
@@ -34,6 +39,77 @@ class ChatSocket {
         if(this.socket instanceof WebSocket)
             this.socket.addEventListener(event, callback);
     }
+}
+
+// #region Settings Automation
+var SettingsData = {};
+
+const SaveSettings = () => {
+    Log("Saving Settings:", SettingsData);
+    window.localStorage.setItem("chatSettings", JSON.stringify(SettingsData));
+
+    const _objToId = (field) => {
+        return field.split(/(?=[A-Z])/).map(val => val.toLowerCase()).join('-');
+    }
+
+    let keys = Object.keys(SettingsData);
+    for(let i = 0; i < keys.length; i++) {
+        let id = _objToId(keys[i]);
+        let elem = document.getElementById(id);
+        if(elem) { SetElemValue(elem, SettingsData[keys[i]]); }
+    }
+}
+
+const LoadSettings = (root, forceElementSync = false) => {
+    let str = localStorage.getItem("chatSettings") ?? null, json = {};
+    if(typeof(str) === 'string') { json = JSON.parse(str); }
+    if(forceElementSync) { json = BuildJsonStructure(json); }
+    SaveSettings();
+    return json;
+}
+
+const SetElemValue = (elem, value) => {
+    switch(elem.type) {
+        case "checkbox":
+            elem.checked = !!value; break;
+        default:
+            elem.value = value;
+    }
+}
+
+const GetElemValue = (elem) => {
+    switch(elem.type) {
+        case "checkbox":
+            return elem.checked;
+        default:
+            return elem.value;
+    }
+}
+
+const SetDataForSettingsElement = (elem, valueOverride = undefined) => {
+    const _idToObj = (str) => { 
+        let args = str.split('-'); let output = args.shift();
+        return output + args.map(val => { 
+            let s = val.charAt(0).toUpperCase(); return s + val.slice(1); 
+        }).join('');
+    }
+
+    let field = _idToObj(elem.id);
+    if(elem.id) { SettingsData[field] = valueOverride?.[field] ?? GetElemValue(elem); }
+}
+
+const BuildJsonStructure = (defaultValues = undefined) => {
+    let elems = document.querySelectorAll('[data-sync]');
+    for(let i = 0; i < elems.length; i++) {
+        SetDataForSettingsElement(elems[i], defaultValues);
+    }
+
+    return SettingsData;
+}
+// #endregion
+
+const Log = (...args) => {
+    if(SettingsData.devDebug) { console.log(args); }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -76,11 +152,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
         }
 
-        if(e.target.dataset) { console.log("Dataset:", e.target.dataset); }
-        switch(e.target.dataset) {
-            case "toggleSettingsGroup":
-                e.target.firstChild.classList.toggle('closed');
-                e.target.nextSibling.classList.toggle('hide');
+        switch(e.target.dataset?.click) {
+            case "toggle-settings-group":
+                e.target.firstElementChild.classList.toggle('closed');
+                e.target.nextElementSibling.classList.toggle('hide');
+                break;
+            case "sync-data":
+                SetDataForSettingsElement(e.target);
+                SaveSettings();
                 break;
             default:
                 break;
@@ -89,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const ToggleSettings = () => {
         if(!(settings instanceof Element))
-            return console.log("No settings element.");
+            return Log("No settings element.");
 
         const settings_button = document.getElementById("ChatSettingsButton");
         const open = !settings.classList.contains('hide');
@@ -97,45 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
         settings_button.classList.toggle('negative', !currently_open);
     }
 
-    const SaveSettings = () => {
-        // configure settings on change
-    }
-
-    const LoadSettings = () => {
-        let str = localStorage.getItem("chatSettings") ?? null, json = {};
-        if(typeof(str) === 'string') { json = JSON.parse(str); }
-        return GetAllDataSyncFields(json);
-    }
-
-    const GetAllDataSyncFields = (defaultValues) => {
-        // Broken, Almost there
-        const getChildFields = (target, previousField = undefined) => {
-            let elems = target.children, data = {};
-            if(elems.length > 0) { console.log(`Searching Through ${elems.length} Element${elems.length > 1 ? 's' : ''}`) }
-            for(let i = 0; i < elems.length; i++) {
-                let field = elems[i]?.dataset?.sync, elem = elems[i];
-                console.log("Current Elem Dataset:", field, previousField, elem.dataset.click);
-                if(!field && elem.children.length == 0)
-                    continue;
-
-                let nextField = field ?? previousField;
-                if(field) {
-                    if(elem.dataset.click == "syncData") {
-                        console.log(' -> Returning Value', defaultValues[field] ?? null);
-                        return defaultValues[field] ?? null;
-                    } else {
-                        field = field ?? previousField
-                        data[field] = getChildFields(elem, nextField);
-                    }
-                }
-            }
-            return data;
-        }
-
-        return getChildFields(settings);
-    }
-
-    console.log("Load Settings:", LoadSettings());
+    Log("Load Settings:", LoadSettings(settings, true));
     
     const RemoveChat = (code) => { if(frame instanceof Element) { frame.classList.add('hide'); } ChatConnection.disconnect(code); }
 });
@@ -146,7 +187,7 @@ function ConfigureChat(frame, chat, input, submit, settings, status) {
     const local = window.location.hostname.includes('localhost');
     const url = `${local ? '' : 'chat.'}${window.location.host.split(".").slice(-2).join(".")}`;
     const fullURL = `${secure ? 'wss' : 'ws'}://${url}/`;
-    // console.log("Full URL:", fullURL);
+    // Log("Full URL:", fullURL);
 
     ChatConnection.connect(fullURL);
     ChatConnection.on('message', (event) => {
@@ -157,14 +198,14 @@ function ConfigureChat(frame, chat, input, submit, settings, status) {
         try {
             onMessage(JSON.parse(msg));
         } catch(err) {
-            console.log("Error:", err, msg, event);
-            console.log("Message Event:", event);
+            Log("Error:", err, msg, event);
+            Log("Message Event:", event);
         }
     });
 
     let even = true;
     const onMessage = (json) => {
-        console.log("JSON:", json);
+        Log("JSON:", json);
         if(json.ServerMessage && !ChatConnection.embed)
             serverMessage(json);
 
