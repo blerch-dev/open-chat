@@ -109,7 +109,7 @@ const BuildJsonStructure = (defaultValues = undefined) => {
 // #endregion
 
 const Log = (...args) => {
-    if(SettingsData.devDebug) { console.log(args); }
+    if(SettingsData?.devDebug) { console.log(args); }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -154,8 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         switch(e.target.dataset?.click) {
             case "toggle-settings-group":
-                e.target.firstElementChild.classList.toggle('closed');
-                e.target.nextElementSibling.classList.toggle('hide');
+                e.target.parentElement.classList.toggle('closed');
                 break;
             case "sync-data":
                 SetDataForSettingsElement(e.target);

@@ -12,6 +12,8 @@ import {
 } from './components';
 import { Roles } from '../user'; // Might move all user needs to components
 
+const isDev = (req: any) => { return req?.session?.user?.roles & Roles["Admin"]?.value; }
+
 // Need to Formalize Data
 
 export const HomePage = (req: any, res: any, data: any = {}) => {
@@ -96,8 +98,6 @@ export const SignUpPage = (req: any, res: any, data: any = {}, userdata: any = {
 }
 
 export const ProfilePage = (req: any, res: any, data: any = {}) => {
-    let isDev = req?.session?.user?.roles & Roles["Admin"]?.value;
-
     let dev = `
     <div id="Developer" class="profile-section">
         <h2>Developer Info</h2>
@@ -137,7 +137,7 @@ export const ProfilePage = (req: any, res: any, data: any = {}) => {
 
     let content = `
     <div class="content-section">
-        ${isDev ? dev : ''}
+        ${!!isDev(req)? dev : ''}
         <div id="Account" class="profile-section">
             <h2>Account Details</h2>
             <span class="profile-card">
@@ -168,7 +168,7 @@ export const ProfilePage = (req: any, res: any, data: any = {}) => {
     <main class="profile-page">
         <nav class="section-nav">
             <div style="flex: 1;">
-                ${isDev ? '<a href="/profile#Developer">Developer</a>' : ''}
+                ${!!isDev(req) ? '<a href="/profile#Developer">Developer</a>' : ''}
                 <a href="/profile#Account">Account</a>
             </div>
             <div style="padding-bottom: 20px;">
@@ -225,7 +225,7 @@ export const LivePage = (req: any, res: any, data: any = {}, options: any = {}) 
     let page = `
         <main class="live-page">
             ${EmbedComponent(data, options)}
-            ${ChatComponent(data, options)}
+            ${ChatComponent(data, options, !!isDev(req))}
         </main>
     `;
 
@@ -235,5 +235,5 @@ export const LivePage = (req: any, res: any, data: any = {}, options: any = {}) 
 }
 
 export const ChatPage = (req: any, res: any, data: any = {}, options: any = {}) => {
-    return MinimumLayout(req, res, data, `${ChatComponent(data, options)}`);
+    return MinimumLayout(req, res, data, `${ChatComponent(data, options, !!isDev(req))}`);
 }

@@ -147,51 +147,59 @@
                 flex-direction: row;
                 width: 100%;
                 align-items: center;
-        
-                img {
-                    padding-right: 8px;
-                    height: 7px;
-                    transform: translateX(2px);
-                    transition: transform 0.2s;
-        
-                    &.closed {
-                        transform: rotateZ(-90deg) translateX(2px);
-                    }
-                }
             }
         
             .chat-settings-group {
                 padding: 5px;
                 background-color: #ffffff08;
                 border-radius: 5px;
-            }
-        
-            .chat-settings-group-label {
-                padding: 0px 4px;
-                cursor: pointer;
 
-                * {
-                    pointer-events: none;
-                    user-select: none;
-                }
-            }
-        
-            .chat-settings-group-body {
-                padding-top: 5px;
-                gap: 4px;
-            }
-        
-            .chat-settings-input-group {
-                justify-content: space-between;
-
-                label {
-                    flex: 1;
+                .chat-settings-group-label {
+                    padding: 0px 4px;
                     cursor: pointer;
+    
+                    * {
+                        pointer-events: none;
+                        user-select: none;
+                    }
                 }
 
-                input {
-                    flex: 0;
-                    cursor: pointer;
+                .chat-settings-group-body {
+                    padding-top: 5px;
+                    gap: 4px;
+
+                    .chat-settings-input-group {
+                        justify-content: space-between;
+        
+                        label {
+                            flex: 1;
+                            cursor: pointer;
+                        }
+        
+                        input {
+                            flex: 0;
+                            cursor: pointer;
+                        }
+                    }
+                }
+
+                img {
+                    padding-right: 8px;
+                    height: 7px;
+                    transform: translateX(2px);
+                }
+
+                &.closed {
+
+                    .chat-settings-group-label {
+                        img {
+                            transform: rotateZ(-90deg) translateX(3px) translateY(-3px);
+                        }
+                    }
+
+                    .chat-settings-group-body {
+                        display: none;
+                    }
                 }
             }
         }

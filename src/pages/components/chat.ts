@@ -6,7 +6,7 @@ interface chatOptions {
     controls?: boolean
 }
 
-export const ChatComponent = (data: any = {}, options: chatOptions = {}) => {
+export const ChatComponent = (data: any = {}, options: chatOptions = {}, isDev = false) => {
     let cv = 0;
     const getNV = (sv?: number) => { if(sv != undefined) { cv = sv; } return ('0' + cv++).slice(-2) }
     return `
@@ -29,7 +29,7 @@ export const ChatComponent = (data: any = {}, options: chatOptions = {}) => {
         <main class="no-scrollbar" style="padding: 0px;">
             <div id="ChatMessageList" data-tab="4"></div>
             <form id="ChatSettings" class="hide">
-                ${ChatSettingsPage()}
+                ${ChatSettingsPage(isDev)}
             </form>
         </main>
         <span id="FillList" class="no-scrollbar" data-tab="5"></span>
@@ -41,21 +41,21 @@ export const ChatComponent = (data: any = {}, options: chatOptions = {}) => {
     </div>
 `};
 
-export const ChatSettingsPage = () => {
+export const ChatSettingsPage = (isDev: boolean) => {
     return `
     <h4>Settings Page</h4>
-    ${ChatSettingsGroup("Advanced Settings", `
+    ${isDev ? ChatSettingsGroup("Advanced Settings", `
         <span class="chat-settings-input-group">
             <label for="dev-debug">Debug</label>
             <input type="checkbox" id="dev-debug" name="dev-debug" data-sync data-click="sync-data">
         </span>
-    `)}
+    `) : ''}
     `;
 }
 
 export const ChatSettingsGroup = (name: string, body: string) => {
     return `
-    <div class="chat-settings-group">
+    <div class="chat-settings-group closed">
         <span class="chat-settings-group-label" data-click="toggle-settings-group">
             <img src="/assets/icons/drop.svg">
             <h4>${name}</h4>
