@@ -1,5 +1,9 @@
-import { ExecException, exec } from 'child_process';
+import path from 'path';
+import * as dotenv from 'dotenv';
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
+// Runs Aysnc Commands
+import { ExecException, exec } from 'child_process';
 const exe = (cmd: string): Promise<ExecException | string> => {
     return new Promise((res, rej) => {
         exec(cmd, (error, stdout, stderr) => {
@@ -11,7 +15,6 @@ const exe = (cmd: string): Promise<ExecException | string> => {
 
 import { Server } from './server';
 import { ChatHandler } from './chat';
-import { DatabaseConnection } from './data';
 
 async function Start() {
     const server = new Server();

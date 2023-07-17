@@ -8,11 +8,8 @@ import session from 'express-session';
 import RedisStore from "connect-redis";
 import cookieParser from 'cookie-parser';
 
-import * as dotenv from 'dotenv';
-dotenv.config({ path: path.join(__dirname, '../.env') });
-
 import { sleep } from './tools';
-import { RedisClient } from './state';
+import { RedisClient, TwitchApp } from './state';
 import { Authenticator } from './auth';
 import { DatabaseConnection } from './data';
 import { DefaultRoute } from './client';
@@ -66,7 +63,6 @@ export class Server {
     constructor(props?: { [key: string]: unknown }) {
         // Setup
         this.props = props ?? {};
-        this.props.env = process.env;
         this.props.isProd = this.isProd();
         this.props.domain = `http${this.isProd() ? 's' : ''}://${this.isProd() ? 
             `www.${process.env.ROOT_URL}` : `${process.env.DEV_URL}`}`;
@@ -82,6 +78,9 @@ export class Server {
         
         this.auth = new Authenticator(this);
         this.db = new DatabaseConnection(this);
+
+        // Platforms
+        let twitch_app = new TwitchApp();
 
         // Format
         this.app.use(express.static(path.resolve(__dirname, './public/')));
