@@ -41,13 +41,6 @@ export interface SiteData {
 export class Server {
 
     public getSession: (req: any) => Promise<any>;
-    public getProps = () => { return this.props; }
-    public getApp = () => { return this.app; }
-    public getListener: () => Promise<http.Server> = async () => { 
-        if(this.server == null) { await sleep(100); return (await this.getListener()); }  return this.server; 
-    }
-    public addRoute = (route: Router) => { this.app.use(route); }
-    public isProd = () => process.env.NODE_ENV === 'prod';
 
     private app = express();
     private server: http.Server;
@@ -58,6 +51,10 @@ export class Server {
     private redis: {
         client?: RedisClient,
         store?: RedisStore
+    } = {};
+
+    private platformConnections: {
+        twitch?: TwitchApp
     } = {};
 
     constructor(props?: { [key: string]: unknown }) {
@@ -80,7 +77,7 @@ export class Server {
         this.db = new DatabaseConnection(this);
 
         // Platforms
-        let twitch_app = new TwitchApp();
+        this.platformConnections['twitch'] = new TwitchApp();
 
         // Format
         this.app.use(express.static(path.resolve(__dirname, './public/')));
@@ -157,7 +154,15 @@ export class Server {
         }
     }
 
+    public getProps = () => { return this.props; }
+    public getApp = () => { return this.app; }
+    public getListener: () => Promise<http.Server> = async () => { 
+        if(this.server == null) { await sleep(100); return (await this.getListener()); }  return this.server; 
+    }
+    public addRoute = (route: Router) => { this.app.use(route); }
+    public isProd = () => process.env.NODE_ENV === 'prod';
     public getAuthenticator() { return this.auth; }
     public getDatabaseConnection() { return this.db; }
     public getRedisClient() { return this.redis.client; }
+    public getPlatformConnections() { return this.platformConnections; }
 }

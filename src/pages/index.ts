@@ -237,3 +237,9 @@ export const LivePage = (req: any, res: any, data: any = {}, options: any = {}) 
 export const ChatPage = (req: any, res: any, data: any = {}, options: any = {}) => {
     return MinimumLayout(req, res, data, `${ChatComponent(data, options, !!isDev(req))}`);
 }
+
+export const DevPage = (req: any, res: any, data: any = {}, options: any = {}) => {
+    // Embed/Chat Vertically to the side of the page for monitoring while on dev page
+        // Click to load embed, button above chat to save from audio on page load
+    // List of functional inputs for check state/managing app
+}
