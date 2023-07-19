@@ -1,9 +1,10 @@
 import { Router } from "express";
 
 import { Server } from './server';
-import { AuthPage, HomePage, LivePage, ProfilePage } from "./pages";
+import { AuthPage, DevPage, HomePage, LivePage, ProfilePage } from "./pages";
 import { Roles, RoleValue } from "./user";
 
+// Might move this to server as a public method
 let devPermCheck = (req: any, res: any, next: any) => {
     if(req?.session?.user?.roles & (RoleValue.ADMIN | RoleValue.OWNER)) { return next(); }
     res.status(401).send("Invalid Credentials or Permissions");
@@ -25,7 +26,7 @@ export const DefaultRoute = (server: Server): Router => {
     route.get('/verify/youtube', (req, res, next) => { auth.verifyYoutube(req, res, next) });
 
     // Admin | Owner Routes
-    route.get('/admin', devPermCheck, (req, res, next) => {  })
+    route.get('/admin', devPermCheck, (req, res, next) => { res.send(DevPage(req, res, next)); })
 
     // Page Routes
     route.get(['/login', '/signup', '/auth'], (req, res) => { res.send(AuthPage(req, res, server.getProps())); });

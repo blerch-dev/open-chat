@@ -9,11 +9,12 @@ import RedisStore from "connect-redis";
 import cookieParser from 'cookie-parser';
 
 import { sleep } from './tools';
-import { RedisClient, TwitchApp } from './state';
+import { RedisClient, TwitchApp, YoutubeApp } from './state';
 import { Authenticator } from './auth';
 import { DatabaseConnection } from './data';
 import { DefaultRoute } from './client';
 import { User, UserData } from './user';
+import { ChatHandler } from './chat';
 
 export class Resource {
     static State = `${process.env.STATE_SUB}.${process.env.ROOT_URL}`;
@@ -47,6 +48,7 @@ export class Server {
     private props: { site?: SiteData, [key: string]: unknown };
     private auth: Authenticator;
     private db: DatabaseConnection;
+    private chat?: ChatHandler;
 
     private redis: {
         client?: RedisClient,
@@ -54,7 +56,8 @@ export class Server {
     } = {};
 
     private platformConnections: {
-        twitch?: TwitchApp
+        twitch?: TwitchApp,
+        youtube?: YoutubeApp
     } = {};
 
     constructor(props?: { [key: string]: unknown }) {
@@ -130,6 +133,18 @@ export class Server {
             return next();
         });
 
+        // Ingress
+        this.app.post('/status/obs/live', (req, res, next) => {
+            // user should be admin/owner
+            // body -> json, code == process.env.INGRESS_CODE
+            // if no, next();
+            // accept input, enable 
+            // set embed using chatHandler
+                // servermessage: { embeds: { id: string, platform: string }[] } // rough layout
+
+            next();
+        });
+
         // Default Route
         this.app.use(DefaultRoute(this));
 
@@ -165,4 +180,7 @@ export class Server {
     public getDatabaseConnection() { return this.db; }
     public getRedisClient() { return this.redis.client; }
     public getPlatformConnections() { return this.platformConnections; }
+
+    public setChatHandler(chat: ChatHandler) { this.chat = chat; }
+    public getChatHandler() { return this.chat; }
 }

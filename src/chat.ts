@@ -87,6 +87,7 @@ export class ChatHandler {
 
     constructor(server: Server, props?: { [key: string]: unknown }) {
         this.server = server;
+        server.setChatHandler(this);
         this.props = { ...server.getProps(), ...props };
 
         this.publisher = server.getRedisClient()?.getPublisher();
