@@ -1,3 +1,5 @@
+import { EventEmitter } from 'node:events'
+
 import Redis from 'ioredis';
 
 export class RedisClient {
@@ -108,3 +110,6 @@ export class YoutubeApp {
         // scraps html for `youtube.com/channel/${channel_name}/live` for details
     }
 }
+
+// Emits events when platform app finds new stream, live notification
+export class ServerEvent extends EventEmitter {}
