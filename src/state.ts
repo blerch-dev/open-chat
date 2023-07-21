@@ -89,7 +89,7 @@ export class YoutubeApp {
         this.api_key = process.env.YOUTUBE_KEY;
     }
 
-    public async forceCheckLive(channel_id: string) {
+    public async forceCheckLive(channel_id?: string, channel_name?: string) {
         let url = `https://www.googleapis.com/youtube/v3/search`;
         url += `?part=snippet&channelId=${channel_id}&type=video`;
         url += `&eventType=live&key=${this.api_key}`;
@@ -112,4 +112,5 @@ export class YoutubeApp {
 }
 
 // Emits events when platform app finds new stream, live notification
-export class ServerEvent extends EventEmitter {}
+export class CustomEvent extends EventEmitter {}
+export const ServerEvent = new CustomEvent();

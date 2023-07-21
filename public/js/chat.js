@@ -3,6 +3,18 @@ class PageManager {
     constructor() {}
 }
 
+class EmbedManager {
+    constructor(embedElem) {}
+
+    setEmbedDirectly(url, meta) {
+        // server is responsible for direct iframe info
+    }
+
+    setEmbed(platform, channel) {
+        // client embeds will have a shortcut/table to look from
+    }
+}
+
 class ChatSocket {
     constructor(loc) {
         //Log("Loaded:", loc); // Should do maps here
@@ -120,6 +132,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const settings = document.getElementById("ChatSettings");
     const status = document.getElementById("ChatStatus");
 
+    const embed = new EmbedManager(document.getElementById('EmbedWindow'));
+
     const getValue = () => {
         let msg = input.value;
         if(msg !== '' && msg != undefined) {
@@ -137,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
         getValue();
     });
 
-    ConfigureChat(frame, chat, input, submit, settings, status);
+    ConfigureChat(embed, frame, chat, input, submit, settings, status);
 
     document.addEventListener('click', (e) => {
         switch(e.target.id) {
@@ -181,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 const ChatConnection = new ChatSocket(window.location);
-function ConfigureChat(frame, chat, input, submit, settings, status) {
+function ConfigureChat(embed, frame, chat, input, submit, settings, status) {
     const secure = window.location.protocol === 'https:';
     const local = window.location.hostname.includes('localhost');
     const url = `${local ? '' : 'chat.'}${window.location.host.split(".").slice(-2).join(".")}`;
@@ -245,6 +259,7 @@ function ConfigureChat(frame, chat, input, submit, settings, status) {
     }
 
     const serverMessage = (json) => {
+        // Will change to icon/status symbol instead of text
         let code = json.ServerMessage?.code;
         if(typeof(code) === 'number') {
             if(code === 1) { status.textContent = "Connected" }
@@ -263,7 +278,13 @@ function ConfigureChat(frame, chat, input, submit, settings, status) {
     }
 
     const eventMessage = (json) => {
-
+        let type = json.type;
+        switch(type) {
+            case 'embed':
+                embed.setEmbedDirectly(json.url, json.meta); break;
+            default:
+                break;
+        }
     }
 
     const messageQueue = (json) => {

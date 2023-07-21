@@ -134,16 +134,7 @@ export class Server {
         });
 
         // Ingress
-        this.app.post('/status/obs/live', (req, res, next) => {
-            // user should be admin/owner
-            // body -> json, code == process.env.INGRESS_CODE
-            // if no, next();
-            // accept input, enable 
-            // set embed using chatHandler
-                // servermessage: { embeds: { id: string, platform: string }[] } // rough layout
-
-            next();
-        });
+        this.app.use(IngressPaths, IngressRoute(this))
 
         // Default Route
         this.app.use(DefaultRoute(this));
@@ -183,4 +174,23 @@ export class Server {
 
     public setChatHandler(chat: ChatHandler) { this.chat = chat; }
     public getChatHandler() { return this.chat; }
+}
+
+// Current Routes
+const IngressPaths = ['/status*']
+const IngressRoute = (server: Server): Router => {
+    const route = Router();
+
+    route.post('/status/obs/live', (req, res, next) => {
+        // user should be admin/owner
+        // body -> json, code == process.env.INGRESS_CODE
+        // if no, next();
+        // accept input, enable 
+        // set embed using server event ('stream-start')
+            // servermessage: { embeds: { id: string, platform: string }[] } // rough layout
+
+        next();
+    });
+
+    return route;
 }

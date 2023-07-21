@@ -21,11 +21,6 @@ async function Start() {
 
     // Runs App - Can make this argv driven later.
     const chat = new ChatHandler(server);
-
-    setTimeout(() => {
-        console.log("Fetching Twitch Live Status");
-        server.getPlatformConnections().twitch?.forceCheckLive(undefined, 'lucidfoxx');
-    }, 2000);
 }
 
 Start();

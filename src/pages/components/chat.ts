@@ -15,7 +15,7 @@ export const ChatComponent = (data: any = {}, options: chatOptions = {}, isDev =
         data-embed="${options?.embed ?? ''}" 
         data-link="${options?.directLink ?? ''}"
     >
-        <header>
+        <header${options?.controls === false ? ' class="hide"' : ''}>
             <h4 id="ChatStatus">${data?.content?.chat ?? ""}</h4>
             <div class="chat-controls">
                 <span tabindex="2${getNV(0)}" id="ChatSettingsButton"><img style="width: 16px;" src="/assets/icons/settings.svg"></span>
@@ -33,7 +33,7 @@ export const ChatComponent = (data: any = {}, options: chatOptions = {}, isDev =
             </form>
         </main>
         <span id="FillList" class="no-scrollbar" data-tab="5"></span>
-        <footer>
+        <footer${options?.controls === false ? ' class="hide"' : ''}>
             <input tabindex="6${getNV(0)}" id="ChatInput" type="text" placeholder="Message..."/>
             <button tabindex="6${getNV()}" id="ChatSend" type="button">Send</button>
         </footer>

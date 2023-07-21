@@ -2,6 +2,7 @@ import WebSocket from 'ws';
 
 import { Server } from "./server";
 import { User, RoleValue, RoleInterface, Status, UserData } from './user';
+import { ServerEvent } from './state';
 
 // Here for Type Checking
 export interface ChatMessage {
@@ -116,6 +117,10 @@ export class ChatHandler {
         });
 
         this.wss.on("connection", (...args) => { this.onConnection(...args) });
+
+        // State Events from OBS/Platform Checks - Will Broadcast EventMsg for Embed
+        ServerEvent.on('stream-start', (meta: { [key: string]: any }) => {});
+        ServerEvent.on('stream-stop', (meta: { [key: string]: any }) => {});
     }
 
     private addSocketToConnectionsList(socket: WebSocket.WebSocket, user: User | null = null) {
