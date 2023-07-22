@@ -35,6 +35,28 @@ export class RedisClient {
     }
 }
 
+export class PlatformHandler {
+
+    private Platform: string;
+
+    private ScrapMethod: Function = () => {};
+    private APIMethod: Function = () => {}
+
+    constructor(platform: string) {
+        this.Platform = platform;
+    }
+
+    public setScrapMethod(func: Function) { this.ScrapMethod = func; }
+    public async forceScrapLiveCheck() {
+        // use scrap method
+    }
+
+    public setAPIMethod(func: Function) { this.APIMethod = func; }
+    public async forceAPILiveCheck() {
+        // use api method
+    }
+}
+
 // Twitch / Event Sub Live Stuff
 export class TwitchApp {
 

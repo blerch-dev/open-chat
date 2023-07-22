@@ -31,14 +31,13 @@ export const DefaultRoute = (server: Server): Router => {
     // Page Routes
     route.get(['/login', '/signup', '/auth'], (req, res) => { res.send(AuthPage(req, res, server.getProps())); });
     route.get(['/logout'], (req, res) => { 
-        req.session.destroy((err) => {
-            res.clearCookie('connect.sid'); 
-            res.redirect('/'); 
-        });
+        req.session.destroy((err) => { res.clearCookie('connect.sid'); res.redirect('/'); });
     });
 
     route.get('/profile', (req, res) => { res.send(ProfilePage(req, res, server.getProps())); });
     route.get('/live', (req, res) => { res.send(LivePage(req, res, server.getProps(), {})); }); // ChatOptions
+    route.get(['/chat', '/chat/embed'], (req, res, next) => { res.end(); });
+
     route.get('/', (req, res) => { res.send(HomePage(req, res, server.getProps())); });
 
     return route;

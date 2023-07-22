@@ -18,10 +18,10 @@ export const ChatComponent = (data: any = {}, options: chatOptions = {}, isDev =
         <header${options?.controls === false ? ' class="hide"' : ''}>
             <h4 id="ChatStatus">${data?.content?.chat ?? ""}</h4>
             <div class="chat-controls">
-                <span tabindex="2${getNV(0)}" id="ChatSettingsButton"><img style="width: 16px;" src="/assets/icons/settings.svg"></span>
+                <span tabindex="2${getNV(0)}" id="ChatSettingsButton" title="Settings"><img style="width: 16px;" src="/assets/icons/settings.svg"></span>
                 ${options?.controls === false ? '' : `
-                    <span tabindex="2${getNV()}" id="ChatPopoutButton"><img src="/assets/icons/popout.svg"></span>
-                    <span tabindex="2${getNV()}" id="ChatCloseButton"><img src="/assets/icons/exit.svg"></span>
+                    <span tabindex="2${getNV()}" id="ChatPopoutButton" title="Popout"><img src="/assets/icons/popout.svg"></span>
+                    <span tabindex="2${getNV()}" id="ChatCloseButton" title="Close"><img src="/assets/icons/exit.svg"></span>
                 `}
             </div>
         </header>
@@ -34,8 +34,13 @@ export const ChatComponent = (data: any = {}, options: chatOptions = {}, isDev =
         </main>
         <span id="FillList" class="no-scrollbar" data-tab="5"></span>
         <footer${options?.controls === false ? ' class="hide"' : ''}>
-            <input tabindex="6${getNV(0)}" id="ChatInput" type="text" placeholder="Message..."/>
-            <button tabindex="6${getNV()}" id="ChatSend" type="button">Send</button>
+            <span class="chat-inputs">
+                <input tabindex="6${getNV(0)}" id="ChatInput" type="text" placeholder="Message..."/>
+                <button tabindex="6${getNV()}" id="ChatSend" type="button">Send</button>
+            </span>
+            <span class="chat-actions">
+                <button id="ChatEmbeds" title="Embeds"><img src="/assets/icons/eye.svg" height="18px"></button>
+            </span>
         </footer>
         <script type="module" src="/js/chat.js"></script>
     </div>
