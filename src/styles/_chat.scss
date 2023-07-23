@@ -210,7 +210,7 @@
         min-height: 42px;
         display: flex;
         flex-direction: column;
-        gap: 3px;
+        gap: 5px;
 
         span {
             width: 100%;
@@ -241,19 +241,27 @@
         }
 
         span.chat-inputs {
-            input {
-                padding: 3px 5px;
+            border-radius: 3px;
+            overflow: hidden;
+
+            textarea {
+                padding: 8px 5px;
                 margin: 0px;
                 outline: none;
                 border: none;
                 color: #fff;
                 background-color: #00000033;
-                border-radius: 3px 0px 0px 3px;
                 height: 36px;
+                min-height: fit-content;
                 font-size: 14px;
                 flex: 1;
                 transition: 0.1s all;
         
+                resize: none;
+                font-family: inherit;
+                line-height: 18px;
+                white-space: nowrap;
+
                 &:hover {
                     background-color: #00000055;
                 }
@@ -261,10 +269,18 @@
                 &:focus {
                     background-color: #00000077;
                 }
-            }
-            
-            button {
-                border-radius: 0px 3px 3px 0px;
+
+                &.show-all {
+                    white-space: normal;
+                }
+
+                // Scrollbar
+                &::-webkit-scrollbar {
+                    display: none;
+                }
+
+                -ms-overflow-style: none;
+                scrollbar-width: none;
             }
         }
 

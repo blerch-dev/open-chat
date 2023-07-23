@@ -45,7 +45,11 @@ export class Server {
 
     private app = express();
     private server: http.Server;
-    private props: { site?: SiteData, [key: string]: unknown };
+    private props: { 
+        site?: SiteData,
+        embeds?: { live: boolean, src: string }[]
+        [key: string]: unknown 
+    };
     private auth: Authenticator;
     private db: DatabaseConnection;
     private chat?: ChatHandler;
@@ -55,6 +59,7 @@ export class Server {
         store?: RedisStore
     } = {};
 
+    // changes will be made
     private platformConnections: {
         twitch?: TwitchApp,
         youtube?: YoutubeApp
@@ -75,6 +80,9 @@ export class Server {
             },
             links: this.props?.site?.links ?? []
         }
+
+        // Embeds
+        this.props.embeds = [];
         
         this.auth = new Authenticator(this);
         this.db = new DatabaseConnection(this);

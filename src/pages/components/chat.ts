@@ -35,7 +35,8 @@ export const ChatComponent = (data: any = {}, options: chatOptions = {}, isDev =
         <span id="FillList" class="no-scrollbar" data-tab="5"></span>
         <footer${options?.controls === false ? ' class="hide"' : ''}>
             <span class="chat-inputs">
-                <input tabindex="6${getNV(0)}" id="ChatInput" type="text" placeholder="Message..."/>
+                <textarea tabindex="6${getNV(0)}" id="ChatInput" autocomplete="off" placeholder="Message..."
+                    oninput='this.style.height = ""; this.style.height = this.scrollHeight + "px"' /></textarea>
                 <button tabindex="6${getNV()}" id="ChatSend" type="button">Send</button>
             </span>
             <span class="chat-actions">
@@ -48,13 +49,23 @@ export const ChatComponent = (data: any = {}, options: chatOptions = {}, isDev =
 
 export const ChatSettingsPage = (isDev: boolean) => {
     return `
-    <h4>Settings Page</h4>
-    ${isDev ? ChatSettingsGroup("Advanced Settings", `
-        <span class="chat-settings-input-group">
-            <label for="dev-debug">Debug</label>
-            <input type="checkbox" id="dev-debug" name="dev-debug" data-sync data-click="sync-data">
-        </span>
-    `) : ''}
+        <h4>Settings Page</h4>
+        ${isDev ? ChatSettingsGroup("Advanced Settings", `
+            ${ChatSettingsInputGroup(`
+                <label for="dev-debug">Debug</label>
+                <input type="checkbox" id="dev-debug" name="dev-debug" data-sync data-click="sync-data">
+            `)}
+        `) : ''}
+        ${ChatSettingsGroup("Chat Layout", `
+            ${ChatSettingsInputGroup(`
+                <label for="input-overflow">Overflow Text Input</label>
+                <input type="checkbox" id="input-overflow" name="input-overflow" data-sync data-click="sync-data">
+            `)}
+            ${ChatSettingsInputGroup(`
+                <label for="input-show-send">Show Send Button</label>
+                <input type="checkbox" id="input-show-send" name="input-show-send" data-sync data-click="sync-data">
+            `)}
+        `)}
     `;
 }
 
@@ -70,4 +81,8 @@ export const ChatSettingsGroup = (name: string, body: string) => {
         </div>
     </div>
     `;
+}
+
+export const ChatSettingsInputGroup = (body: string) => {
+    return `<span class="chat-settings-input-group">${body}</span>`
 }

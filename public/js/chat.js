@@ -1,5 +1,5 @@
 const Log = (...args) => {
-    if(PageManager.instance.settings?.devDebug) { console.log(args); }
+    if(PageManager.instance.settings?.devDebug) { console.log(...args); }
 }
 
 // TODO - Page Managment (Possible Mod Support Enabler) - Functional but needs Refactoring for OOP
@@ -24,8 +24,10 @@ class PageManager {
         this.ConfigureChat(this);
     
         this.input.addEventListener('keydown', (e) => {
-            if(e.code == "Enter" || e.code == "NumpadEnter")
-                getValue();
+            const shiftEnterIgnore = true;
+            if((e.code == "Enter" || e.code == "NumpadEnter") && (!e.shiftKey || shiftEnterIgnore)) {
+                e.preventDefault(); getValue();
+            }
         });
     
         document.addEventListener('click', (e) => {
@@ -50,8 +52,8 @@ class PageManager {
                     e.target.parentElement.classList.toggle('closed');
                     break;
                 case "sync-data":
-                    SetDataForSettingsElement(e.target);
-                    SaveSettings();
+                    this.SetDataForSettingsElement(e.target);
+                    this.SaveSettings();
                     break;
                 default:
                     break;
@@ -79,11 +81,39 @@ class PageManager {
         const RemoveChat = (code) => { if(frame instanceof Element) { frame.classList.add('hide'); } this.chatConnection.disconnect(code); }
     }
 
+    // TODO - add profiles to settings, so logging out doesnt remove some settings missing by role
     // #region Settings Automation
-    SaveSettings = () => {
+    SaveSettings = (data) => {
+        this.settings = data ?? this.settings;
         Log("Saving Settings:", this.settings);
         window.localStorage.setItem("chatSettings", JSON.stringify(this.settings));
+        this.ApplySettings();
+    }
 
+    LoadSettings = (root, forceElementSync = false) => {
+        let str = localStorage.getItem("chatSettings") ?? null
+
+        // Default Values
+        let json = {
+            devDebug: false,
+    
+            inputOverflow: true,
+            inputShowSend: true
+        };
+
+        if(typeof(str) === 'string') {
+            try {
+                let data = JSON.parse(str);
+                json = data;
+            } catch(err) {}
+        }
+
+        if(forceElementSync) { json = this.BuildJsonStructure(json); }
+        this.SaveSettings(json);
+        return json;
+    }
+
+    ApplySettings = () => {
         const _objToId = (field) => {
             return field.split(/(?=[A-Z])/).map(val => val.toLowerCase()).join('-');
         }
@@ -93,15 +123,21 @@ class PageManager {
             let id = _objToId(keys[i]);
             let elem = document.getElementById(id);
             if(elem) { this.SetElemValue(elem, this.settings[keys[i]]); }
-        }
-    }
 
-    LoadSettings = (root, forceElementSync = false) => {
-        let str = localStorage.getItem("chatSettings") ?? null, json = {};
-        if(typeof(str) === 'string') { json = JSON.parse(str); }
-        if(forceElementSync) { json = this.BuildJsonStructure(json); }
-        this.SaveSettings();
-        return json;
+            switch(id) {
+                case "input-overflow":
+                    elem = document.getElementById("ChatInput");
+                    elem.classList.toggle("show-all", this.settings[keys[i]]);
+                    elem.style.height = ""; elem.style.height = elem.scrollHeight + "px";
+                    break;
+                case "input-show-send":
+                    elem = document.getElementById("ChatSend");
+                    elem.classList.toggle("hide", !this.settings[keys[i]]);
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 
     SetElemValue = (elem, value) => {
