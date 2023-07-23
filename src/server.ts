@@ -9,7 +9,7 @@ import RedisStore from "connect-redis";
 import cookieParser from 'cookie-parser';
 
 import { sleep } from './tools';
-import { RedisClient, TwitchApp, YoutubeApp } from './state';
+import { TwitchHandler, PlatformHandler, RedisClient, ServerEvent } from './state';
 import { Authenticator } from './auth';
 import { DatabaseConnection } from './data';
 import { DefaultRoute } from './client';
@@ -46,9 +46,9 @@ export class Server {
     private app = express();
     private server: http.Server;
     private props: { 
-        site?: SiteData,
-        embeds?: { live: boolean, src: string }[]
-        [key: string]: unknown 
+        site: SiteData,
+        embeds: { platform: string, src: string }[], // only live embeds
+        [key: string]: any | undefined
     };
     private auth: Authenticator;
     private db: DatabaseConnection;
@@ -59,36 +59,52 @@ export class Server {
         store?: RedisStore
     } = {};
 
-    // changes will be made
-    private platformConnections: {
-        twitch?: TwitchApp,
-        youtube?: YoutubeApp
-    } = {};
+    private platformManager: PlatformManager;
 
-    constructor(props?: { [key: string]: unknown }) {
-        // Setup
-        this.props = props ?? {};
-        this.props.isProd = this.isProd();
-        this.props.domain = `http${this.isProd() ? 's' : ''}://${this.isProd() ? 
-            `www.${process.env.ROOT_URL}` : `${process.env.DEV_URL}`}`;
-
+    constructor(props?: { [key: string]: any }) {
         // SiteData
-        this.props.site = {
+        let site = {
             content: {
-                tab: this.props?.site?.content?.tab ?? "Tab Title",
-                header: this.props?.site?.content?.header ?? "Header Title"
+                tab: props?.site?.content?.tab ?? "Tab Title",
+                header: props?.site?.content?.header ?? "Header Title"
             },
-            links: this.props?.site?.links ?? []
+            links: props?.site?.links ?? []
         }
 
+        // Setup
+        this.props = { site: site, embeds: [], ...props };
+        this.props.env = process.env;
+        this.props.isProd = this.isProd();
+        this.props.domain = `http${this.isProd() ? 's' : ''}://${this.isProd() ? 
+            `www.${process.env.ROOT_URL}` : `${process.env.DEV_URL}:${process.env.SERVER_PORT}`}`;
+
         // Embeds
-        this.props.embeds = [];
+        const sortEmbeds = (...embeds: { platform: string, src: string }[]) => {
+            return embeds.sort((a, b) => a.platform.localeCompare(b.platform));
+        }
+
+        ServerEvent.addListener('live', (data: { platform: string, src: string }) => {
+            let index = this.props.embeds.map((em) => em.platform).indexOf(data.platform);
+            if(index >= 0) { this.props.embeds[index] = data; } else { 
+                this.props.embeds = sortEmbeds(...this.props.embeds, data); 
+            }     
+        });
+
+        ServerEvent.addListener('offline', (data) => {
+            let index = this.props.embeds.map((em) => em.platform).indexOf(data.platform);
+            if(index >= 0) { this.props.embeds.splice(index, 1) } else { 
+                console.log(`Attempted to remove Embed: ${data.platform}, but was already out of list. Ignoring.`);
+            }
+        });
         
+        // Apps
         this.auth = new Authenticator(this);
         this.db = new DatabaseConnection(this);
 
         // Platforms
-        this.platformConnections['twitch'] = new TwitchApp();
+        this.platformManager = new PlatformManager(
+            new TwitchHandler()
+        );
 
         // Format
         this.app.use(express.static(path.resolve(__dirname, './public/')));
@@ -178,7 +194,6 @@ export class Server {
     public getAuthenticator() { return this.auth; }
     public getDatabaseConnection() { return this.db; }
     public getRedisClient() { return this.redis.client; }
-    public getPlatformConnections() { return this.platformConnections; }
 
     public setChatHandler(chat: ChatHandler) { this.chat = chat; }
     public getChatHandler() { return this.chat; }
@@ -201,4 +216,48 @@ const IngressRoute = (server: Server): Router => {
     });
 
     return route;
+}
+
+class PlatformManager {
+
+    private debug = false;
+    private Log = (...args: any[]) => { if(this.debug) { console.log(...args); } }
+
+    private platformConnections: {
+        twitch?: PlatformHandler,
+        youtube?: PlatformHandler,
+        [key: string]: PlatformHandler | undefined
+    } = {};
+
+    // Will Use OBS Ingress Info from Server to Determine If Interval Should Run (or can ignore)
+    private Interval: NodeJS.Timer;
+    private IntervalMinutes: number = 5;
+
+    constructor(...handlers: PlatformHandler[]) {
+        this.addHandlers(...handlers);
+
+        const interval_func = async () => {
+            this.Log("Checking Live from Connections:");
+            let keys = Object.keys(this.platformConnections);
+            for(let i = 0; i < keys.length; i++) {
+                let con = this.platformConnections[keys[i]];
+                this.Log(" -> " + con?.getPlatform());
+                con?.checkForLiveChange(await con?.forceScrapLiveCheck());
+            }
+        }
+
+        this.Interval = setInterval(() => {
+            interval_func();
+        }, this.IntervalMinutes * 60 * 1000);
+
+        interval_func();
+    }
+
+    public addHandler(handler: PlatformHandler) {
+        this.platformConnections[handler.getPlatform()] = handler;
+    }
+
+    public addHandlers(...handlers: PlatformHandler[]) {
+        for(let i = 0; i < handlers.length; i++) { this.addHandler(handlers[i]); }
+    }
 }

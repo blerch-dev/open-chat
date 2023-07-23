@@ -55,6 +55,8 @@ class PageManager {
                     this.SetDataForSettingsElement(e.target);
                     this.SaveSettings();
                     break;
+                case "set-embed":
+                    this.embedManager.setEmbed(...(e.target.dataset?.clickArgs.split('|') ?? [])); break;
                 default:
                     break;
             }
@@ -124,6 +126,7 @@ class PageManager {
             let elem = document.getElementById(id);
             if(elem) { this.SetElemValue(elem, this.settings[keys[i]]); }
 
+            // Element Specific, Might Redesign This to Fully Manual Anyway
             switch(id) {
                 case "input-overflow":
                     elem = document.getElementById("ChatInput");
@@ -266,6 +269,8 @@ class PageManager {
         const eventMessage = (json) => {
             let type = json.type;
             switch(type) {
+                case 'live-status-change':
+                    pageManager.embedManager.handleLiveState(); break;
                 case 'embed':
                     pageManager.embedManager.setEmbedDirectly(json.url, json.meta); break;
                 default:
@@ -284,6 +289,9 @@ class PageManager {
 }
 
 class EmbedManager {
+
+    _embeds = [];
+
     constructor(embedElem) {}
 
     setEmbedDirectly(url, meta) {
@@ -292,6 +300,10 @@ class EmbedManager {
 
     setEmbed(platform, channel) {
         // client embeds will have a shortcut/table to look from
+    }
+
+    handleLiveState(data) {
+
     }
 }
 

@@ -26,7 +26,7 @@ export const DefaultRoute = (server: Server): Router => {
     route.get('/verify/youtube', (req, res, next) => { auth.verifyYoutube(req, res, next) });
 
     // Admin | Owner Routes
-    route.get('/admin', devPermCheck, (req, res, next) => { res.send(DevPage(req, res, next)); })
+    route.get('/admin', devPermCheck, (req, res, next) => { DevPage(req, res, server.getProps(), server); }); // Async Handles Send
 
     // Page Routes
     route.get(['/login', '/signup', '/auth'], (req, res) => { res.send(AuthPage(req, res, server.getProps())); });

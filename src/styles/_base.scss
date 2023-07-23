@@ -8,6 +8,8 @@
     --light-bg: #c2c1c1;
     --font-color: #f5efef;
 
+    --theme-main: #777777;
+
     --twitch-purple: #6441a5;
     --youtube-red: #ff0000;
 
@@ -89,10 +91,25 @@ header {
                 align-items: center;
                 background-color: var(--page-bg);
 
+                &.is-live {
+                    background-color: var(--theme-main);
+                }
+
                 & > p {
                     display: flex;
                     align-items: center;
                     gap: 8px;
+                }
+
+                #HeaderStatusSource {
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                
+                    img {
+                        height: 16px;
+                        cursor: pointer;
+                    }
                 }
             }
         }

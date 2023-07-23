@@ -37,28 +37,75 @@ export class RedisClient {
 
 export class PlatformHandler {
 
-    private Platform: string;
+    protected Platform: string;
 
-    private ScrapMethod: Function = () => {};
-    private APIMethod: Function = () => {}
+    protected isLive: boolean = false;
+
+    // Scrap Text will be a long string, might need to trim after a certain length if running into issues
+    protected LatestScrapAddress: string = "";
+    protected LatestScrapText: string = "";
+    private ScrapMethod = async (...args: any[]) => {
+        this.LatestScrapAddress = args[0] as string ?? "";
+        this.LatestScrapText = await(await fetch(this.LatestScrapAddress)).text() ?? "err";
+        return false;
+    };
+
+    private APIMethod = async (...args: any[]) => {}
 
     constructor(platform: string) {
         this.Platform = platform;
     }
 
-    public setScrapMethod(func: Function) { this.ScrapMethod = func; }
-    public async forceScrapLiveCheck() {
-        // use scrap method
+    public getPlatform() { return this.Platform; }
+
+    public checkForLiveChange(live_state: boolean) {
+        if(this.isLive !== live_state) {
+            this.isLive = live_state;
+            ServerEvent.emit(this.isLive ? 'live' : 'offline', { 
+                platform: this.Platform, 
+                src: this.getEmbedSource() 
+            });
+        }
     }
 
-    public setAPIMethod(func: Function) { this.APIMethod = func; }
-    public async forceAPILiveCheck() {
+    public getEmbedSource() {
+        return "null";
+    }
+
+    public setScrapMethod(func: (...args: any[]) => Promise<boolean>) { this.ScrapMethod = func; }
+    public async forceScrapLiveCheck(...args: any[]) {
+        // use scrap method
+        return await this.ScrapMethod(...args);
+    }
+
+    public setAPIMethod(func: (...args: any[]) => Promise<any>) { this.APIMethod = func; }
+    public async forceAPILiveCheck(...args: any[]) {
         // use api method
+        return await this.APIMethod(...args);
+    }
+
+    public getLatestScrap() { return { address: this.LatestScrapAddress, value: this.LatestScrapText}; }
+}
+
+export class TwitchHandler extends PlatformHandler {
+    constructor() {
+        super('Twitch');
+        this.setScrapMethod(async () => {
+            this.LatestScrapAddress = `https://www.twitch.tv/${process.env.TWITCH_CHANNEL}`
+            this.LatestScrapText = await(await fetch(this.LatestScrapAddress)).text() ?? "err";
+            return this.LatestScrapText.indexOf('isLiveBroadcast') >= 0;
+        });
+    }
+
+    public getEmbedSource() {
+        return `https://player.twitch.tv/?channel=${process.env.TWITCH_CHANNEL}&parent=${
+            process.env.NODE_ENV === 'prod' ? process.env.ROOT_URL : process.env.DEV_URL
+        }`;
     }
 }
 
 // Twitch / Event Sub Live Stuff
-export class TwitchApp {
+export class _TwitchApp {
 
     private access_token: string | undefined;
     private expiration: { ts: number, in: number } | undefined;
@@ -102,7 +149,7 @@ export class TwitchApp {
     }
 }
 
-export class YoutubeApp {
+export class _YoutubeApp {
 
     private api_key: string | undefined;
     private stream_video_id: string | undefined;

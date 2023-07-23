@@ -11,6 +11,8 @@ import {
     EmbedComponent 
 } from './components';
 import { Roles } from '../user'; // Might move all user needs to components
+import { Server } from '../server';
+import { PlatformHandler } from '../state';
 
 const isDev = (req: any) => { return req?.session?.user?.roles & Roles["Admin"]?.value; }
 
@@ -238,8 +240,27 @@ export const ChatPage = (req: any, res: any, data: any = {}, options: any = {}) 
     return MinimumLayout(req, res, data, `${ChatComponent(data, options, !!isDev(req))}`);
 }
 
-export const DevPage = (req: any, res: any, data: any = {}, options: any = {}) => {
+export const DevPage = async (req: any, res: any, data: any = {}, server?: Server) => {
     // Embed/Chat Vertically to the side of the page for monitoring while on dev page
         // Click to load embed, button above chat to save from audio on page load
     // List of functional inputs for check state/managing app
+
+    // let handler = (server?.getPlatformConnections('twitch') as PlatformHandler);
+    // let scrap = handler?.getLatestScrap() ?? {};
+    // to
+    // <p>Latest Scrap (${scrap.address}):</p>
+    // <pre data-click="toggle-show-all">${scrap.value.replace(/<[^>]+>/g, '')}</pre>
+
+    // Eventually, this will be all api calls and will remove the async function and return just a string
+
+    let page = `
+        <main class="admin-page">
+            <div></div>
+        </main>
+        <script type="module" src="/js/admin.js"></script>
+    `;
+
+    res.send(DefaultLayout(req, res, data, `
+        ${page}
+    `));
 }

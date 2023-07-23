@@ -1,0 +1,15 @@
+main.admin-page {
+
+    pre {
+        padding: 10px;
+        background-color: var(--page-alt);
+        cursor: pointer;
+
+        overflow: hidden;
+        text-overflow: ellipsis;
+
+        &.show-all {
+            white-space: break-spaces;
+        }
+    }
+}

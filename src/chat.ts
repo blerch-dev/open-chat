@@ -108,7 +108,7 @@ export class ChatHandler {
     private configureServer() {
         this.subscriber?.on("message", (channel, message) => {
             if(this.ChatHistory.unshift(message) > this.HistoryLength) { this.ChatHistory.pop(); }
-            this.boradcast(message);
+            this.broadcast(message);
         });
 
         this.subscriber?.subscribe('chat|msg', (err, count) => {
@@ -121,6 +121,26 @@ export class ChatHandler {
         // State Events from OBS/Platform Checks - Will Broadcast EventMsg for Embed
         ServerEvent.on('stream-start', (meta: { [key: string]: any }) => {});
         ServerEvent.on('stream-stop', (meta: { [key: string]: any }) => {});
+
+        ServerEvent.addListener('live', (data: { platform: string, src: string }) => {
+            this.broadcast(JSON.stringify({
+                EventMessage: {
+                    type: 'live-status-change',
+                    data: { ...data, live: true }
+                }
+            })) 
+        });
+
+        ServerEvent.addListener('offline', (data) => {
+            this.broadcast(JSON.stringify({
+                EventMessage: {
+                    type: 'live-status-change',
+                    data: { ...data, live: false }
+                }
+            })) 
+        });
+
+        // might want a src change, but this will do for now
     }
 
     private addSocketToConnectionsList(socket: WebSocket.WebSocket, user: User | null = null) {
@@ -137,7 +157,7 @@ export class ChatHandler {
         }
     }
 
-    private boradcast(msg: string) {
+    private broadcast(msg: string) {
         for(let [key, value] of this.UserSockets) {
             value.getSockets().forEach((socket) => { socket.send(msg); })
         }
