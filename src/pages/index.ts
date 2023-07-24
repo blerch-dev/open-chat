@@ -245,17 +245,18 @@ export const DevPage = async (req: any, res: any, data: any = {}, server?: Serve
         // Click to load embed, button above chat to save from audio on page load
     // List of functional inputs for check state/managing app
 
-    // let handler = (server?.getPlatformConnections('twitch') as PlatformHandler);
-    // let scrap = handler?.getLatestScrap() ?? {};
-    // to
-    // <p>Latest Scrap (${scrap.address}):</p>
-    // <pre data-click="toggle-show-all">${scrap.value.replace(/<[^>]+>/g, '')}</pre>
+
+    // let handler = (server?.getPlatformManager()?.getPlatformConnections('Youtube') as PlatformHandler);
+    // await handler?.forceScrapLiveCheck();
+    // let scrap = handler?.getLatestScrap();
 
     // Eventually, this will be all api calls and will remove the async function and return just a string
 
     let page = `
         <main class="admin-page">
-            <div></div>
+            <div>
+
+            </div>
         </main>
         <script type="module" src="/js/admin.js"></script>
     `;

@@ -281,7 +281,7 @@ class PageManager {
         const messageQueue = (json) => {
             let list = json.MessageQueue;
             for(let i = 0; i < list.length; i++) {
-                chatMessage(list[i]);
+                try { chatMessage(JSON.parse(list[i])); } catch(err) { console.log("Error Parsing JSON Queue:", err); }
             }
         }
     }

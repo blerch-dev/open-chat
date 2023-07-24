@@ -9,7 +9,7 @@ import RedisStore from "connect-redis";
 import cookieParser from 'cookie-parser';
 
 import { sleep } from './tools';
-import { TwitchHandler, PlatformHandler, RedisClient, ServerEvent } from './state';
+import { TwitchHandler, PlatformHandler, RedisClient, ServerEvent, Embed, YoutubeHandler } from './state';
 import { Authenticator } from './auth';
 import { DatabaseConnection } from './data';
 import { DefaultRoute } from './client';
@@ -83,19 +83,21 @@ export class Server {
             return embeds.sort((a, b) => a.platform.localeCompare(b.platform));
         }
 
-        ServerEvent.addListener('live', (data: { platform: string, src: string }) => {
+        ServerEvent.on('live-state-change', (data: Embed) => {
             let index = this.props.embeds.map((em) => em.platform).indexOf(data.platform);
-            if(index >= 0) { this.props.embeds[index] = data; } else { 
-                this.props.embeds = sortEmbeds(...this.props.embeds, data); 
-            }     
-        });
-
-        ServerEvent.addListener('offline', (data) => {
-            let index = this.props.embeds.map((em) => em.platform).indexOf(data.platform);
-            if(index >= 0) { this.props.embeds.splice(index, 1) } else { 
+            if(index >= 0) { 
+                if(data.live) { this.props.embeds[index] = data; }
+                else { this.props.embeds.splice(index, 1); }
+            } else if(data.live) { 
+                this.props.embeds = sortEmbeds(...this.props.embeds, data);
+            } else {
                 console.log(`Attempted to remove Embed: ${data.platform}, but was already out of list. Ignoring.`);
             }
         });
+
+        // State Events from OBS/Platform Checks
+        //ServerEvent.on('stream-start', (meta: { [key: string]: any }) => {});
+        //ServerEvent.on('stream-stop', (meta: { [key: string]: any }) => {});
         
         // Apps
         this.auth = new Authenticator(this);
@@ -103,7 +105,8 @@ export class Server {
 
         // Platforms
         this.platformManager = new PlatformManager(
-            new TwitchHandler()
+            new TwitchHandler(),
+            new YoutubeHandler()
         );
 
         // Format
@@ -193,6 +196,7 @@ export class Server {
     public isProd = () => process.env.NODE_ENV === 'prod';
     public getAuthenticator() { return this.auth; }
     public getDatabaseConnection() { return this.db; }
+    public getPlatformManager() { return this.platformManager; }
     public getRedisClient() { return this.redis.client; }
 
     public setChatHandler(chat: ChatHandler) { this.chat = chat; }
@@ -237,13 +241,15 @@ class PlatformManager {
         this.addHandlers(...handlers);
 
         const interval_func = async () => {
-            this.Log("Checking Live from Connections:");
+            this.Log("Checking Live from Connections:" + (new Date()).toLocaleTimeString());
             let keys = Object.keys(this.platformConnections);
             for(let i = 0; i < keys.length; i++) {
                 let con = this.platformConnections[keys[i]];
-                this.Log(" -> " + con?.getPlatform());
-                con?.checkForLiveChange(await con?.forceScrapLiveCheck());
+                let result = !!await con?.forceScrapLiveCheck();
+                this.Log(" -> " + con?.getPlatform() + " | " + result);
+                con?.checkForLiveChange(result);
             }
+            this.Log("\n");
         }
 
         this.Interval = setInterval(() => {
@@ -259,5 +265,9 @@ class PlatformManager {
 
     public addHandlers(...handlers: PlatformHandler[]) {
         for(let i = 0; i < handlers.length; i++) { this.addHandler(handlers[i]); }
+    }
+
+    public getPlatformConnections(field?: string) {
+        return field ? this.platformConnections[field] : this.platformConnections;
     }
 }

@@ -35,6 +35,13 @@ export class RedisClient {
     }
 }
 
+export interface Embed { 
+    type: string,
+    platform: string, 
+    src: string,
+    live: boolean
+}
+
 export class PlatformHandler {
 
     protected Platform: string;
@@ -44,13 +51,6 @@ export class PlatformHandler {
     // Scrap Text will be a long string, might need to trim after a certain length if running into issues
     protected LatestScrapAddress: string = "";
     protected LatestScrapText: string = "";
-    private ScrapMethod = async (...args: any[]) => {
-        this.LatestScrapAddress = args[0] as string ?? "";
-        this.LatestScrapText = await(await fetch(this.LatestScrapAddress)).text() ?? "err";
-        return false;
-    };
-
-    private APIMethod = async (...args: any[]) => {}
 
     constructor(platform: string) {
         this.Platform = platform;
@@ -61,27 +61,32 @@ export class PlatformHandler {
     public checkForLiveChange(live_state: boolean) {
         if(this.isLive !== live_state) {
             this.isLive = live_state;
-            ServerEvent.emit(this.isLive ? 'live' : 'offline', { 
+            ServerEvent.emit('live-state-change', {
+                type: 'livestream',
                 platform: this.Platform, 
-                src: this.getEmbedSource() 
+                src: this.getEmbedSource(),
+                live: this.isLive
             });
+
+            return true;
         }
+
+        return false;
     }
 
     public getEmbedSource() {
         return "null";
     }
 
-    public setScrapMethod(func: (...args: any[]) => Promise<boolean>) { this.ScrapMethod = func; }
     public async forceScrapLiveCheck(...args: any[]) {
-        // use scrap method
-        return await this.ScrapMethod(...args);
+        this.LatestScrapAddress = `${args[0]}`;
+        this.LatestScrapText = await(await fetch(this.LatestScrapAddress)).text() ?? "err";
+        return false
     }
 
-    public setAPIMethod(func: (...args: any[]) => Promise<any>) { this.APIMethod = func; }
     public async forceAPILiveCheck(...args: any[]) {
         // use api method
-        return await this.APIMethod(...args);
+        return false
     }
 
     public getLatestScrap() { return { address: this.LatestScrapAddress, value: this.LatestScrapText}; }
@@ -90,17 +95,70 @@ export class PlatformHandler {
 export class TwitchHandler extends PlatformHandler {
     constructor() {
         super('Twitch');
-        this.setScrapMethod(async () => {
-            this.LatestScrapAddress = `https://www.twitch.tv/${process.env.TWITCH_CHANNEL}`
-            this.LatestScrapText = await(await fetch(this.LatestScrapAddress)).text() ?? "err";
-            return this.LatestScrapText.indexOf('isLiveBroadcast') >= 0;
-        });
     }
+
+    public async forceScrapLiveCheck() {
+        this.LatestScrapAddress = `https://www.twitch.tv/${process.env.TWITCH_CHANNEL}`;
+        this.LatestScrapText = await(await fetch(this.LatestScrapAddress)).text() ?? "err";
+        return this.LatestScrapText.indexOf('isLiveBroadcast') >= 0;
+    };
 
     public getEmbedSource() {
         return `https://player.twitch.tv/?channel=${process.env.TWITCH_CHANNEL}&parent=${
             process.env.NODE_ENV === 'prod' ? process.env.ROOT_URL : process.env.DEV_URL
         }`;
+    }
+}
+
+export class YoutubeHandler extends PlatformHandler {
+
+    private IdLength = 11;
+    private VideoId: string = "";
+    private ScheduledStartTime: number | undefined;
+
+    constructor() {
+        super('Youtube');
+    }
+
+    public async forceScrapLiveCheck() {
+        // For Scheduled Streams:: Might add way to embed early so people can see it as soon as it goes live
+        // need more detailed embed logic for this
+
+        this.LatestScrapAddress = `https://www.youtube.com/${process.env.YOUTUBE_CHANNEL}/live`;
+        this.LatestScrapText = await(await fetch(this.LatestScrapAddress)).text() ?? "err";
+
+        let CheckIndex = this.LatestScrapText.indexOf('{"key":"is_viewed_live","value":"True"}');
+        let result = CheckIndex >= 0;
+        if(result || this.LatestScrapText.indexOf('{"key":"is_viewed_live","value":"False"}') >= 0) {
+            let vid_check = 'liveStreamabilityRenderer":{"videoId":"'; // could do regex with '"broadcastId":"1"' as the second half
+            let schedule_check = 'scheduledStartTime":"';
+
+            let vid_index = this.LatestScrapText.indexOf(vid_check) + vid_check.length
+            this.VideoId = this.LatestScrapText.substring(vid_index, vid_index + this.IdLength);
+            
+            if(this.LatestScrapText.indexOf(schedule_check) >= 0) {
+                let sch_index = this.LatestScrapText.indexOf(schedule_check) + schedule_check.length;
+                let seconds = Number(this.LatestScrapText.substring(sch_index, sch_index + 20).split('"')[0]);
+                this.ScheduledStartTime = seconds * 1000;
+            } else {
+                this.ScheduledStartTime = Date.now();
+            }
+        }
+
+        return result;
+    }
+
+    public getEmbedSource() {
+        return "null";
+    }
+
+    public getLatestScrap() { 
+        return { 
+            address: this.LatestScrapAddress, 
+            value: this.LatestScrapText,
+            VideoId: this.VideoId,
+            StartTime: this.ScheduledStartTime
+        };
     }
 }
 

@@ -118,26 +118,15 @@ export class ChatHandler {
 
         this.wss.on("connection", (...args) => { this.onConnection(...args) });
 
-        // State Events from OBS/Platform Checks - Will Broadcast EventMsg for Embed
-        ServerEvent.on('stream-start', (meta: { [key: string]: any }) => {});
-        ServerEvent.on('stream-stop', (meta: { [key: string]: any }) => {});
-
-        ServerEvent.addListener('live', (data: { platform: string, src: string }) => {
+        // Live Status Events
+        ServerEvent.on('live-status-change', (data: { platform: string, src: string, live: boolean }) => {
+            console.log("Broadcasting Live State Change:", data);
             this.broadcast(JSON.stringify({
                 EventMessage: {
                     type: 'live-status-change',
-                    data: { ...data, live: true }
+                    data: { ...data }
                 }
-            })) 
-        });
-
-        ServerEvent.addListener('offline', (data) => {
-            this.broadcast(JSON.stringify({
-                EventMessage: {
-                    type: 'live-status-change',
-                    data: { ...data, live: false }
-                }
-            })) 
+            }));
         });
 
         // might want a src change, but this will do for now
