@@ -3,8 +3,13 @@ const Log = (...args) => {
 }
 
 // TODO - Page Managment (Possible Mod Support Enabler) - Functional but needs Refactoring for OOP
+// needs hash management for embed support, server is ready
 class PageManager {
     static instance = null;
+    static embeds = {
+        last_check: 0,
+        value: undefined
+    };
 
     constructor() {
         PageManager.instance = this;
@@ -37,12 +42,25 @@ class PageManager {
                 case "ChatSettingsButton":
                     ToggleSettings(); break;
                 case "ChatPopoutButton":
-                    window.open(this.chatConnection.loc.origin + '/chat', '_blank', 'location=yes,height=900,width=300,scrollbars=no,status=yes');
+                    window.open(this.chatConnection.loc.origin + '/chat', '_blank', 
+                        'location=yes,height=900,width=300,scrollbars=no,status=yes');
                     RemoveChat(1000); break;
                 case "ChatCloseButton":
                     RemoveChat(1001); break;
                 case "ChatEmbeds":
-                    break; // chat-request type msg to server, cache results for 1-5 minutes locally to cut down repeats
+                    if(Date.now() - PageManager.embeds.last_check < 60 * 1000 && PageManager.embeds.value !== undefined) {
+                        return this.chatConnection.onMessage({ 
+                            EventMessage: { 
+                                type: 'embeds', 
+                                data: PageManager.embeds.value,
+                                time: PageManager.embeds.last_check
+                            }
+                        });
+                    } 
+                    
+                    Log("Fetching Embeds!");
+                    this.chatConnection.sendChat({ request: 'embeds' });
+                    break;
                 default:
                     break;
             }
@@ -183,7 +201,7 @@ class PageManager {
     }
     // #endregion
 
-    // #region Chat
+    // #region Chat - will retwrite so its more object oriented
     ConfigureChat(pageManager) {
         const secure = window.location.protocol === 'https:';
         const local = window.location.hostname.includes('localhost');
@@ -198,7 +216,7 @@ class PageManager {
                 return this.chatConnection.socket.send("pong");
             
             try {
-                onMessage(JSON.parse(msg));
+                this.chatConnection.onMessage(JSON.parse(msg));
             } catch(err) {
                 Log("Error:", err, msg, event);
                 Log("Message Event:", event);
@@ -206,7 +224,7 @@ class PageManager {
         });
 
         let even = true;
-        const onMessage = (json) => {
+        this.chatConnection.onMessage = (json) => {
             Log("JSON:", json);
             if(json.ServerMessage && !this.chatConnection.embed)
                 serverMessage(json);
@@ -267,12 +285,17 @@ class PageManager {
         }
 
         const eventMessage = (json) => {
-            let type = json.type;
+            let event = json.EventMessage;
+            let type = event.type;
             switch(type) {
                 case 'live-status-change':
                     pageManager.embedManager.handleLiveState(); break;
-                case 'embed':
-                    pageManager.embedManager.setEmbedDirectly(json.url, json.meta); break;
+                case 'embed': // applies to setting embed stream
+                    pageManager.embedManager.setEmbedDirectly(event.url, event.meta); break;
+                case 'embeds': // msg with current user embeds
+                    PageManager.embeds = { last_check: event.time ?? Date.now(), value: event.data };
+                    renderEventMessage(event);
+                    break;
                 default:
                     break;
             }
@@ -282,6 +305,22 @@ class PageManager {
             let list = json.MessageQueue;
             for(let i = 0; i < list.length; i++) {
                 try { chatMessage(JSON.parse(list[i])); } catch(err) { console.log("Error Parsing JSON Queue:", err); }
+            }
+        }
+
+        const renderEventMessage = (json) => {
+            console.log("Rendering Event Message:", json);
+            switch(json.type) {
+                case 'embeds':
+                    let embeds = Object.keys(json.data).map((val) => { return { name: val, count: json.data[val] } });
+                    let elems = embeds.map((val) => `<span><a href="${val.name}">${val.name}</a>: ${val.count}</span>`);
+                    let msg = document.createElement('p');
+                    msg.classList.add('event-message');
+                    msg.innerHTML = `Current Embeds:<br>${elems.join('<br>')}`;
+                    pageManager.chat.appendChild(msg);
+                    break;
+                default:
+                    break;
             }
         }
     }
@@ -311,9 +350,14 @@ class ChatSocket {
     constructor(loc) {
         //Log("Loaded:", loc); // Should do maps here
         this.loc = loc;
+
+        // embed on stream, ignores events/server msg
         this.embed = loc?.pathname?.indexOf('/embed') >= 0 ?? false;
 
         this.events = new Map();
+
+        this.currentChatEvent = null;
+        this.chatEventHistory = [];
     }
 
     connect = (url) => {
@@ -334,9 +378,25 @@ class ChatSocket {
         if(!(this.socket instanceof WebSocket))
             return;
         
-        this.socket.send(JSON.stringify({ message: value }));
+        console.log("Value Type:", typeof(value), value);
+        if(typeof(value) === 'object') {
+            return this.socket.send(JSON.stringify(value));
+        }
+
+        let msg = {}, addMessage = true;
+        if(value.charAt(0) == '/') {
+            addMessage = false;
+            msg.command = value;
+        } else if(value.charAt(0) == '!') {
+            msg.command = value;
+        }
+
+        // event check, if event is happening and response is a valid response, send as event
+
+        if(addMessage) {  msg.message = value; }
+        this.socket.send(JSON.stringify(msg));
         //Log("Send Value:", value);
-    };
+    }
 
     on(event, callback) {
         this.events.set(event, callback);

@@ -18,7 +18,7 @@ const valToRI = (val: number, str: string, hex: string = "#ffffff") => {
     return { name: str, icon: `/assets/badges/${nameToURL(str)}.svg`, value: val, color: hex };
 }
 
-// Change to Fit Client
+// Change to Fit Client - Might move subscriptions to its own field
 const roleData: RoleInterface[] = [
     valToRI(1 << 0, 'Owner', '#ff0000'),
     valToRI(1 << 1, 'Admin', '#ff5c00'),
@@ -133,6 +133,7 @@ export class User {
 
         return roles.sort((a, b) => a.value - b.value);
     }
+    public getRoleValue() { return this.data.roles; }
     public getStatus() { return this.data.status; }
     public getEffectiveStatus() {
         let status = this.data.status ?? 0; let records = this.data.records ?? [];

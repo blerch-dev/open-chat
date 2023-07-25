@@ -21,6 +21,15 @@ export interface ChatMessage {
     }
 }
 
+// Idea - Commands/Event Responses/Embed(other) Request Have a Field Check
+    // !commands are added to both message and command field
+export interface ChatResponse {
+    message?: string,
+    request?: string,
+    command?: string,
+    event?: string
+}
+
 export class Chatter {
 
     private data: {
@@ -46,6 +55,8 @@ export class Chatter {
 
 export class SocketConnection {
 
+    public embed: string | undefined;
+
     private user: User | null = null;
     private sockets: Set<WebSocket.WebSocket> = new Set();
 
@@ -68,6 +79,29 @@ export class SocketConnection {
     public getSockets() { return [...this.sockets]; }
 }
 
+class ChatEvent {
+    private respondents: Set<string> = new Set();
+    private responses: Map<any, Set<string>> = new Map();
+
+    constructor(...valid_responses: string[]) {
+
+    }
+
+    public Respond(user: User, response: any) {
+        if(this.respondents.has(user.getUUID())) { return false; }
+        this.respondents.add(user.getUUID());
+
+        if(this.responses.has(response)) {
+            let l = this.responses.get(response) as Set<string>;
+            l.add(user.getUUID()); this.responses.set(response, l);
+        } else {
+            this.responses.set(response, new Set<string>(user.getUUID()));
+        }
+
+        return true;
+    }
+}
+
 // Chat logic
 export class ChatHandler {
 
@@ -85,6 +119,13 @@ export class ChatHandler {
 
     // Save to Text File
     private BannedPhrases: string[] = [];
+
+    // Events
+    private currentEvent: ChatEvent | undefined;
+    private eventHistory: ChatEvent[] = [];
+
+    // Request
+    private lastEmbedCheck: { last_check: number, value?: { [key: string]: number } } = { last_check: 0 };
 
     constructor(server: Server, props?: { [key: string]: unknown }) {
         this.server = server;
@@ -212,22 +253,62 @@ export class ChatHandler {
         });
 
         // Message
-        const onJSON = (json: { message: string }) => {
-            CommandHandle(json.message);
+        const onJSON = (json: ChatResponse) => {
+            if(json?.request) { RequestHandler(json); }
+            if(json?.command) { CommandHandle(json); }
+            if(json?.event) { EventHandler(json); }
+            if(json?.message) { MessageHandler(json); }
+        }
+
+        const RequestHandler = (res: ChatResponse) => {
+            // embed/(future request types) handler
+            switch(res?.request) {
+                case 'embeds':
+                    socket.send(JSON.stringify({ EventMessage: {
+                        type: 'embeds',
+                        data: this.checkEmbeds()
+                    } }));
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        const CommandHandle = (res: ChatResponse) => {
+            // Detect Command: Check User Roles/Status/Event State
+                // Do Command if Valid
+
+            if(res.command?.charAt(0) != '/' && res.command?.charAt(0) != '!') { return; }
+            let commander = user.getRoleValue() & (RoleValue.ADMIN | RoleValue.OWNER | RoleValue.MOD | RoleValue.BOT)
+            if(!commander) { return; }
+
+            let args = res.command?.split(' ') ?? [];
+            let cmd = args[0];
+            switch(cmd) {
+                case '/poll':
+                    this.runPoll(user, socket, ...args); break;
+                default:
+                    socket.send(JSON.stringify({ ServerMessage: {
+                        message: `Invalid Command: ${cmd}`,
+                        icon: '/assets/info.svg',
+                    } })); break;
+            }            
+        }
+
+        const EventHandler = (res: ChatResponse) => {
+            // handles poll/event responses
+        }
+
+        const MessageHandler = (res: ChatResponse) => {
             const msg = JSON.stringify({
                 ChatMessage: {
                     username: user.getName(),
-                    message: json.message,
+                    message: res.message,
                     roles: user.getRoles()
                 }
             });
 
             this.publisher?.publish(`chat|msg`, msg);
-        }
-
-        const CommandHandle = (msg: string) => {
-            // Detect Command: Check User Roles/Status/Event State
-                // Do Command if Valid
         }
 
         socket.on("message", (message) => {
@@ -242,5 +323,30 @@ export class ChatHandler {
         });
 
         socket.on("error", (err) => { console.log("Socket Error:", err); });
+    }
+
+    private runPoll(user: User, socket: WebSocket.WebSocket, ...args: string[]) {
+        // User/Socket is valid to run cmd, check args and if they are valid publish eventmessage
+        //this.publisher?.publish(`chat|msg`, msg);
+    }
+
+    private checkEmbeds() {
+        let tc = Date.now() - this.lastEmbedCheck.last_check > 60 * 1000; // 1 minute
+        if(!tc && this.lastEmbedCheck.value !== undefined) { return this.lastEmbedCheck.value; }
+
+        let sc = Array.from(this.UserSockets.values());
+        let em = sc.filter((val) => typeof(val.embed) === 'string').map((val) => val.embed) as string[];
+        let answer: { [key: string]: number } = {};
+        for(let i = 0; i < em.length; i++) {
+            if(answer[em[i]]) { answer[em[i]]++ }
+            else { answer[em[i]] = 1 }
+        }
+
+        this.lastEmbedCheck = {
+            last_check: Date.now(),
+            value: answer
+        }
+
+        return answer;
     }
 }

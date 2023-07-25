@@ -52,6 +52,16 @@ const FormatDBString = (hardFormat = false) => {
         "notes"                 text,
         PRIMARY KEY ("id")
     );
+
+    ${hardFormat ? 'DROP TABLE IF EXISTS user_status_effects;' : ''}
+    CREATE TABLE IF NOT EXISTS "user_subscriptions" (
+        "id"                    serial,
+        "user_id"               uuid NOT NULL,
+        "level"                 smallint NOT NULL DEFAULT 0,
+        "platform"              varchar(32) NOT NULL,
+        "expires"               timestamp without time zone NOT NULL DEFAULT NOW() + interval '30 days',
+        PRIMARY KEY ("id")
+    );
     `;
 }
 

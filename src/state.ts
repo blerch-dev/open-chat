@@ -113,7 +113,7 @@ export class TwitchHandler extends PlatformHandler {
 export class YoutubeHandler extends PlatformHandler {
 
     private IdLength = 11;
-    private VideoId: string = "";
+    private VideoId: string | undefined;
     private ScheduledStartTime: number | undefined;
 
     constructor() {
@@ -149,7 +149,10 @@ export class YoutubeHandler extends PlatformHandler {
     }
 
     public getEmbedSource() {
-        return "null";
+        if(!this.VideoId)
+            return `/embed?error=no_video_id`;
+
+        return `https://www.youtube.com/embed/${this.VideoId}?autoplay=1&playsinline=1&hd=1`;
     }
 
     public getLatestScrap() { 

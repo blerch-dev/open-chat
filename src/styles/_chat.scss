@@ -95,9 +95,12 @@
                 }
             }
 
-            & > .chat-message {
+            .chat-message, .server-message, .event-message {
                 width: 100%;
                 overflow: hidden;
+            }
+
+            & > .chat-message {
                 padding: 2px 3px;
 
                 & > p {
@@ -111,8 +114,6 @@
             }
 
             & > .server-message {
-                width: 100%;
-                overflow: hidden;
                 padding: 4px 6px;
                 background-color: #ffffff12;
 
@@ -121,6 +122,10 @@
                     white-space: normal;
                     font-weight: 700;
                 }
+            }
+
+            & > .event-message {
+                background-color: #ffffff18;
             }
         }
 
@@ -291,6 +296,10 @@
                 align-items: center;
                 min-width: fit-content;
                 padding: 2px 8px;
+
+                img {
+                    pointer-events: none;
+                }
             }
         }
     }

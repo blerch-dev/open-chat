@@ -84,6 +84,7 @@ export class Server {
         }
 
         ServerEvent.on('live-state-change', (data: Embed) => {
+            console.log("Live Status Changed:", data);
             let index = this.props.embeds.map((em) => em.platform).indexOf(data.platform);
             if(index >= 0) { 
                 if(data.live) { this.props.embeds[index] = data; }
@@ -234,7 +235,8 @@ class PlatformManager {
     } = {};
 
     // Will Use OBS Ingress Info from Server to Determine If Interval Should Run (or can ignore)
-    private Interval: NodeJS.Timer;
+    private ShouldRunChecks: boolean = false;
+    private Interval: NodeJS.Timer | undefined;
     private IntervalMinutes: number = 5;
 
     constructor(...handlers: PlatformHandler[]) {
@@ -246,17 +248,19 @@ class PlatformManager {
             for(let i = 0; i < keys.length; i++) {
                 let con = this.platformConnections[keys[i]];
                 let result = !!await con?.forceScrapLiveCheck();
-                this.Log(" -> " + con?.getPlatform() + " | " + result);
+                this.Log("\t-> " + con?.getPlatform() + "\t| " + result);
                 con?.checkForLiveChange(result);
             }
             this.Log("\n");
         }
 
-        this.Interval = setInterval(() => {
+        if(this.ShouldRunChecks) {
+            this.Interval = setInterval(() => {
+                interval_func();
+            }, this.IntervalMinutes * 60 * 1000);
+    
             interval_func();
-        }, this.IntervalMinutes * 60 * 1000);
-
-        interval_func();
+        }
     }
 
     public addHandler(handler: PlatformHandler) {

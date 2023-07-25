@@ -40,7 +40,16 @@ export class Authenticator {
             // could generate uuuids, add to seperate table that describes roles/permissions
             // would be applied here
 
-        let json = JSON.parse(data.replace(/'/g, '\"'));
+        let json: { [key: string]: any };
+        try {
+            json = JSON.parse(data.replace(/'/g, '\"'));
+            if(!json || Object.keys(json).length == 0) { 
+                return res.json({ Error: 'Issue with OAuth Platform. Try again later.', Code: 0x0104 }); 
+            }
+        } catch(err) {
+            return res.json({ Error: 'Issue with Parsing Information. Try again later.', Code: 0x0105 });
+        }
+
         let validNames = await this.server.getDatabaseConnection().availableUserNames(username);
         if(validNames instanceof Error)
             return res.json({ Error: "Name is already taken." });
@@ -52,6 +61,7 @@ export class Authenticator {
             connections: json ?? {}
         }
 
+        // DB function to repeat create and check on conflict, return first available uuid for userdata above - TODO
         let result = await this.server.getDatabaseConnection().availableUUIDs(userdata.uuid);
         // console.log("Check:", User.ValidUserData(userdata), !(result instanceof Error), userdata, result);
         if(User.ValidUserData(userdata) && !(result instanceof Error) && result.length == 1) {
