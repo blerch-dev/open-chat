@@ -246,16 +246,25 @@ export const DevPage = async (req: any, res: any, data: any = {}, server?: Serve
     // List of functional inputs for check state/managing app
 
 
-    // let handler = (server?.getPlatformManager()?.getPlatformConnections('Youtube') as PlatformHandler);
-    // await handler?.forceScrapLiveCheck();
-    // let scrap = handler?.getLatestScrap();
+    let handler = (server?.getPlatformManager()?.getPlatformConnections('Kick')) as PlatformHandler;
+    await handler.forceScrapLiveCheck();
+    let scrap = handler.getLatestScrap();
+
+    let ph = new PlatformHandler('TestKick');
+    await ph.forceScrapLiveCheck('https://kick.com/ohgood');
+    let sc = ph.getLatestScrap();
 
     // Eventually, this will be all api calls and will remove the async function and return just a string
 
     let page = `
         <main class="admin-page">
             <div>
-
+                <p>Offline Check</p>
+                <pre data-click="toggle-show-all">${scrap.value.replace(/<\/?[^>]+(>|$)/g, "")}</pre>
+            </div>
+            <div>
+                <p>Online Check</p>
+                <pre data-click="toggle-show-all">${sc.value.replace(/<\/?[^>]+(>|$)/g, "")}</pre>
             </div>
         </main>
         <script type="module" src="/js/admin.js"></script>

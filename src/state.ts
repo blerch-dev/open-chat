@@ -44,9 +44,9 @@ export interface Embed {
 
 export class PlatformHandler {
 
-    protected Platform: string;
+    public isLive: boolean = false;
 
-    protected isLive: boolean = false;
+    protected Platform: string;
 
     // Scrap Text will be a long string, might need to trim after a certain length if running into issues
     protected LatestScrapAddress: string = "";
@@ -162,6 +162,24 @@ export class YoutubeHandler extends PlatformHandler {
             VideoId: this.VideoId,
             StartTime: this.ScheduledStartTime
         };
+    }
+}
+
+export class KickHandler extends PlatformHandler {
+    constructor() {
+        super('Kick');
+    }
+
+    public async forceScrapLiveCheck() {
+        this.LatestScrapAddress = `https://www.kick.com/${process.env.TWITCH_CHANNEL}`;
+        this.LatestScrapText = await(await fetch(this.LatestScrapAddress)).text() ?? "err";
+        //return this.LatestScrapText.indexOf('isLiveBroadcast') >= 0;
+
+        return false;
+    }
+
+    public getEmbedSource() {
+        return `https://player.kick.com/${process.env.KICK_CHANNEL}?autoplay=true`;
     }
 }
 

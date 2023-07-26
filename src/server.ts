@@ -9,7 +9,7 @@ import RedisStore from "connect-redis";
 import cookieParser from 'cookie-parser';
 
 import { sleep } from './tools';
-import { TwitchHandler, PlatformHandler, RedisClient, ServerEvent, Embed, YoutubeHandler } from './state';
+import { TwitchHandler, PlatformHandler, RedisClient, ServerEvent, Embed, YoutubeHandler, KickHandler } from './state';
 import { Authenticator } from './auth';
 import { DatabaseConnection } from './data';
 import { DefaultRoute } from './client';
@@ -107,7 +107,8 @@ export class Server {
         // Platforms
         this.platformManager = new PlatformManager(
             new TwitchHandler(),
-            new YoutubeHandler()
+            new YoutubeHandler(),
+            new KickHandler()
         );
 
         // Format
@@ -217,6 +218,15 @@ const IngressRoute = (server: Server): Router => {
         // set embed using server event ('stream-start')
             // servermessage: { embeds: { id: string, platform: string }[] } // rough layout
 
+        let json: any;
+        try {
+            json = JSON.parse(req.body);
+        } catch(err) {}
+
+        if(json?.code == process.env.INGRESS_CODE) {
+            server.getPlatformManager().setCheckMode(json?.isLive ?? undefined);
+        }
+
         next();
     });
 
@@ -236,31 +246,14 @@ class PlatformManager {
 
     // Will Use OBS Ingress Info from Server to Determine If Interval Should Run (or can ignore)
     private ShouldRunChecks: boolean = false;
+    private CheckForLive: boolean | undefined = undefined;
+
     private Interval: NodeJS.Timer | undefined;
     private IntervalMinutes: number = 5;
 
     constructor(...handlers: PlatformHandler[]) {
         this.addHandlers(...handlers);
-
-        const interval_func = async () => {
-            this.Log("Checking Live from Connections:" + (new Date()).toLocaleTimeString());
-            let keys = Object.keys(this.platformConnections);
-            for(let i = 0; i < keys.length; i++) {
-                let con = this.platformConnections[keys[i]];
-                let result = !!await con?.forceScrapLiveCheck();
-                this.Log("\t-> " + con?.getPlatform() + "\t| " + result);
-                con?.checkForLiveChange(result);
-            }
-            this.Log("\n");
-        }
-
-        if(this.ShouldRunChecks) {
-            this.Interval = setInterval(() => {
-                interval_func();
-            }, this.IntervalMinutes * 60 * 1000);
-    
-            interval_func();
-        }
+        this.startCheckInterval();
     }
 
     public addHandler(handler: PlatformHandler) {
@@ -273,5 +266,38 @@ class PlatformManager {
 
     public getPlatformConnections(field?: string) {
         return field ? this.platformConnections[field] : this.platformConnections;
+    }
+
+    public setCheckMode(live: boolean | undefined) {
+        this.CheckForLive = live ?? undefined;
+    }
+
+    public startCheckInterval(time?: number) {
+        const interval_func = async () => {
+            if(!this.ShouldRunChecks) { return; }
+            this.Log("Checking Live from Connections:" + (new Date()).toLocaleTimeString());
+            let keys = Object.keys(this.platformConnections);
+            for(let i = 0; i < keys.length; i++) {
+                let con = this.platformConnections[keys[i]] as PlatformHandler;
+
+                // Use's OBS Plugin Status Updates to Determine if Checks should be made
+                if(this.CheckForLive !== undefined && (con.isLive && this.CheckForLive) || (!con.isLive && !this.CheckForLive))
+                    continue;
+
+                let result = !!await con.forceScrapLiveCheck();
+                this.Log("\t-> " + con.getPlatform() + "\t| " + result);
+                con.checkForLiveChange(result);
+            }
+            this.Log("\n");
+        }
+
+        time = Math.max((time ?? this.IntervalMinutes), 1);
+        this.Log(`Setting Interval Speed at ${time} Minute${time > 1 ? 's' : ''}.`);
+        if(this.Interval) { clearInterval(this.Interval); }
+        this.Interval = setInterval(() => {
+            interval_func();
+        }, time * 60 * 1000);
+
+        interval_func();
     }
 }
