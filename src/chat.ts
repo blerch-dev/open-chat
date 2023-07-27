@@ -160,11 +160,11 @@ export class ChatHandler {
         this.wss.on("connection", (...args) => { this.onConnection(...args) });
 
         // Live Status Events
-        ServerEvent.on('live-status-change', (data: { platform: string, src: string, live: boolean }) => {
+        ServerEvent.on('live-state-change', (data: { platform: string, src: string, live: boolean }) => {
             console.log("Broadcasting Live State Change:", data);
             this.broadcast(JSON.stringify({
                 EventMessage: {
-                    type: 'live-status-change',
+                    type: 'live-state-change',
                     data: { ...data }
                 }
             }));

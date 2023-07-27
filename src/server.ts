@@ -47,7 +47,7 @@ export class Server {
     private server: http.Server;
     private props: { 
         site: SiteData,
-        embeds: { platform: string, src: string }[], // only live embeds
+        embeds: { platform: string, src: string, channel: string }[], // only live embeds
         [key: string]: any | undefined
     };
     private auth: Authenticator;
@@ -79,7 +79,7 @@ export class Server {
             `www.${process.env.ROOT_URL}` : `${process.env.DEV_URL}:${process.env.SERVER_PORT}`}`;
 
         // Embeds
-        const sortEmbeds = (...embeds: { platform: string, src: string }[]) => {
+        const sortEmbeds = (...embeds: { platform: string, src: string, channel: string }[]) => {
             return embeds.sort((a, b) => a.platform.localeCompare(b.platform));
         }
 
@@ -245,7 +245,7 @@ class PlatformManager {
     } = {};
 
     // Will Use OBS Ingress Info from Server to Determine If Interval Should Run (or can ignore)
-    private ShouldRunChecks: boolean = false;
+    private ShouldRunChecks: boolean = true;
     private CheckForLive: boolean | undefined = undefined;
 
     private Interval: NodeJS.Timer | undefined;
@@ -272,6 +272,10 @@ class PlatformManager {
         this.CheckForLive = live ?? undefined;
     }
 
+    public setShouldCheck(val: boolean) {
+        this.ShouldRunChecks = val;
+    }
+
     public startCheckInterval(time?: number) {
         const interval_func = async () => {
             if(!this.ShouldRunChecks) { return; }
@@ -281,8 +285,9 @@ class PlatformManager {
                 let con = this.platformConnections[keys[i]] as PlatformHandler;
 
                 // Use's OBS Plugin Status Updates to Determine if Checks should be made
-                if(this.CheckForLive !== undefined && (con.isLive && this.CheckForLive) || (!con.isLive && !this.CheckForLive))
+                if(this.CheckForLive !== undefined && ((con.isLive && this.CheckForLive) || (!con.isLive && !this.CheckForLive))) {
                     continue;
+                }
 
                 let result = !!await con.forceScrapLiveCheck();
                 this.Log("\t-> " + con.getPlatform() + "\t| " + result);

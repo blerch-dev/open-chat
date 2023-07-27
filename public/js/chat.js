@@ -27,8 +27,6 @@ class PageManager {
     onPageLoad() {
 
         // Elems
-        this.#embedManager = new EmbedManager(document.getElementById('EmbedWindow'), this);
-        this.#chatSocket = new ChatSocket(window.location, this);
         this.#chatElems = {
             frame: document.getElementById("ChatWindow"),
             list: document.getElementById("ChatMessageList"),
@@ -37,9 +35,12 @@ class PageManager {
             status: document.getElementById("ChatStatus")
         }
 
+        this.#embedManager = new EmbedManager(document.getElementById('EmbedWindow'), this);
+        this.#chatSocket = new ChatSocket(this.#chatElems.frame, this);
+
         // Settings
         this.#settings = {};
-        Log("Load Settings:", this.LoadSettings(this.settings, true));
+        Log("Load Settings:", this.LoadSettings(this.#settings, true));
     
         // Events
         this.#chatElems.input.addEventListener('keydown', (e) => { this.onKeyPress(e); });
@@ -89,7 +90,7 @@ class PageManager {
             case "ChatEmbeds":
                 let time_check = Date.now() - this.#embeds.last_check < this.#embeds.cache_time * 1000;
                 if(time_check && this.#embeds.value !== undefined) {
-                    return this.chatConnection.onMessage({ 
+                    return this.#chatSocket.onMessage({ 
                         EventMessage: { 
                             type: 'embeds', 
                             data: this.#embeds.value,
@@ -99,7 +100,7 @@ class PageManager {
                 } 
                 
                 Log("Fetching Embeds!");
-                this.chatConnection.sendChat({ request: 'embeds' });
+                this.#chatSocket.sendChat({ request: 'embeds' });
                 break;
             default:
                 break;
@@ -114,7 +115,9 @@ class PageManager {
                 this.SaveSettings();
                 break;
             case "set-embed":
-                this.embedManager.setEmbed(...(e.target.dataset?.clickArgs.split('|') ?? [])); break;
+                this.#embedManager.setEmbed(...(e.target.dataset?.clickArgs.split('|') ?? [])); break;
+            case "set-embed-directly":
+                this.#embedManager.setEmbedDirectly(...(e.target.dataset?.clickArgs.split('|') ?? [])); break;
             default:
                 break;
         }
@@ -124,9 +127,9 @@ class PageManager {
     // TODO - add profiles to settings, so logging out doesnt remove some settings missing by role
     // #region Settings Automation
     SaveSettings = (data) => {
-        this.settings = data ?? this.settings;
-        Log("Saving Settings:", this.settings);
-        window.localStorage.setItem("chatSettings", JSON.stringify(this.settings));
+        this.#settings = data ?? this.#settings;
+        Log("Saving Settings:", this.#settings);
+        window.localStorage.setItem("chatSettings", JSON.stringify(this.#settings));
         this.ApplySettings();
     }
 
@@ -155,22 +158,22 @@ class PageManager {
             return field.split(/(?=[A-Z])/).map(val => val.toLowerCase()).join('-');
         }
 
-        let keys = Object.keys(this.settings);
+        let keys = Object.keys(this.#settings);
         for(let i = 0; i < keys.length; i++) {
             let id = _objToId(keys[i]);
             let elem = document.getElementById(id);
-            if(elem) { this.SetElemValue(elem, this.settings[keys[i]]); }
+            if(elem) { this.SetElemValue(elem, this.#settings[keys[i]]); }
 
             // Element Specific, Might Redesign This to Fully Manual Anyway
             switch(id) {
                 case "input-overflow":
                     elem = document.getElementById("ChatInput");
-                    elem.classList.toggle("show-all", this.settings[keys[i]]);
+                    elem.classList.toggle("show-all", this.#settings[keys[i]]);
                     elem.style.height = ""; elem.style.height = elem.scrollHeight + "px";
                     break;
                 case "input-show-send":
                     elem = document.getElementById("ChatSend");
-                    elem.classList.toggle("hide", !this.settings[keys[i]]);
+                    elem.classList.toggle("hide", !this.#settings[keys[i]]);
                     break;
                 default:
                     break;
@@ -203,13 +206,13 @@ class PageManager {
         }
 
         let field = _idToObj(elem.id);
-        if(elem.id) { this.settings[field] = valueOverride?.[field] ?? this.GetElemValue(elem); }
+        if(elem.id) { this.#settings[field] = valueOverride?.[field] ?? this.GetElemValue(elem); }
     }
 
     BuildJsonStructure = (defaultValues = undefined) => {
         let elems = document.querySelectorAll('[data-sync]');
         for(let i = 0; i < elems.length; i++) { this.SetDataForSettingsElement(elems[i], defaultValues); }
-        return this.settings;
+        return this.#settings;
     }
     // #endregion
 
@@ -269,10 +272,10 @@ class PageManager {
 
         let type = event.type;
         switch(type) {
-            case 'live-status-change':
-                pageManager.embedManager.handleLiveState(); break;
+            case 'live-state-change':
+                this.#embedManager.handleLiveState(event.data); break;
             case 'embed': // applies to setting embed stream
-                pageManager.embedManager.setEmbedDirectly(event.url, event.meta); break;
+                this.#embedManager.setEmbedDirectly(event.url, event.meta); break;
             case 'embeds': // msg with current user embeds
                 this.#embeds = {
                     cache_time: this.#embeds.cache_time ?? 60,
@@ -289,15 +292,43 @@ class PageManager {
     // #endregion
 }
 
+class Embed {
+    constructor(data) {
+        this.type = data?.type;
+        this.platform = data?.platform;
+        this.url = data?.src;
+        this.live = data?.live;
+    }
+}
+
 // needs hash management for embed support, server is ready - todo
 class EmbedManager {
 
-    _embeds = [];
+    // Platforms Live for Target Channel, Not Manual Embeds
+        // someway for users to select preferred embed, drag and drop list in settings page - todo
+    #embeds = [];
 
-    constructor(embedElem, pageManager) {}
+    #embedStatusElems = {
+        type: null,
+        embed: null,
+        source: null
+    }
 
-    setEmbedDirectly(url, meta) {
+    constructor(embedElem, pageManager) {
+        let manual_embed = window.location.hash;
+
+        this.#embedStatusElems = {
+            type: document.getElementById("HeaderStatusType"),
+            embed: document.getElementById("HeaderStatusEmbed"),
+            source: document.getElementById("HeaderStatusSource"),
+        }
+    }
+
+    setEmbedDirectly(url, platform, channel) {
         // server is responsible for direct iframe info
+        console.log("Set Embed Directly:", url, platform, channel);
+        // set embed selected as "selected"
+
     }
 
     setEmbed(platform, channel) {
@@ -305,7 +336,24 @@ class EmbedManager {
     }
 
     handleLiveState(data) {
+        for(let i = 0; i < this.#embeds.length; i++) {
+            let em = this.#embeds[i];
+            if(em.platform == data.platform) { 
+                if(data.live) { em = data; }
+                else { this.#embeds.splice(i, 1); }
+                return;
+            }
+        }
 
+        // No Platform Match
+        if(data.live) { this.#embeds.push(data); }
+
+        // Change Elem
+    }
+
+    setEmbedElem(target) {
+        //<img data-click="set-embed-directly" data-click-args="${emb.src}|${emb.platform}|${emb.channel}" 
+            //title="${emb.platform}" src="${img_src}"/>
     }
 }
 
@@ -317,7 +365,7 @@ class ChatSocket {
         this.pageManager = pageManager;
 
         // Embeded on Stream, Ignores Server/Event Messages
-        this.embed = loc?.pathname?.indexOf('/embed') >= 0 ?? false;
+        this.embed = this.loc.pathname?.indexOf('/embed') >= 0 ?? false;
 
         this.events = new Map();
 

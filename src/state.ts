@@ -39,7 +39,8 @@ export interface Embed {
     type: string,
     platform: string, 
     src: string,
-    live: boolean
+    live: boolean,
+    channel: string
 }
 
 export class PlatformHandler {
@@ -47,13 +48,15 @@ export class PlatformHandler {
     public isLive: boolean = false;
 
     protected Platform: string;
+    protected Channel: string;
 
     // Scrap Text will be a long string, might need to trim after a certain length if running into issues
     protected LatestScrapAddress: string = "";
     protected LatestScrapText: string = "";
 
-    constructor(platform: string) {
+    constructor(platform: string, channel?: string) {
         this.Platform = platform;
+        this.Channel = channel ?? process.env.CHANNEL_DISPLAY as string ?? "undefined";
     }
 
     public getPlatform() { return this.Platform; }
@@ -65,7 +68,8 @@ export class PlatformHandler {
                 type: 'livestream',
                 platform: this.Platform, 
                 src: this.getEmbedSource(),
-                live: this.isLive
+                live: this.isLive,
+                channel: this.Channel
             });
 
             return true;
