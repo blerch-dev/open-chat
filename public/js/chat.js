@@ -2,104 +2,124 @@ const Log = (...args) => {
     if(PageManager.instance.settings?.devDebug) { console.log(...args); }
 }
 
-// TODO - Page Managment (Possible Mod Support Enabler) - Functional but needs Refactoring for OOP
-// needs hash management for embed support, server is ready
 class PageManager {
     static instance = null;
-    static embeds = {
+    
+    #embeds = {
+        cache_time: 60,
         last_check: 0,
         value: undefined
     };
 
+    #embedManager = null;
+    #chatSocket = null;
+    #chatElems = null;
+    #settings = null;
+
+    // Chat Elem States
+    #even = false;
+
     constructor() {
         PageManager.instance = this;
-        this.embedManager = new EmbedManager(document.getElementById('EmbedWindow'));
-
-        this.frame = document.getElementById("ChatWindow");
-        this.chat = document.getElementById("ChatMessageList");
-        this.input = document.getElementById("ChatInput");
-        this.submit = document.getElementById("ChatSend");
-        this.settingsElem = document.getElementById("ChatSettings");
-        this.status = document.getElementById("ChatStatus");
-
-        this.settings = {};
-        Log("Load Settings:", this.LoadSettings(this.settings, true));
-
-        this.chatConnection = new ChatSocket(window.location);
-        this.ConfigureChat(this);
-    
-        this.input.addEventListener('keydown', (e) => {
-            const shiftEnterIgnore = true;
-            if((e.code == "Enter" || e.code == "NumpadEnter") && (!e.shiftKey || shiftEnterIgnore)) {
-                e.preventDefault(); getValue();
-            }
-        });
-    
-        document.addEventListener('click', (e) => {
-            switch(e.target.id) {
-                case "ChatSend":
-                    getValue(); break;
-                case "ChatSettingsButton":
-                    ToggleSettings(); break;
-                case "ChatPopoutButton":
-                    window.open(this.chatConnection.loc.origin + '/chat', '_blank', 
-                        'location=yes,height=900,width=300,scrollbars=no,status=yes');
-                    RemoveChat(1000); break;
-                case "ChatCloseButton":
-                    RemoveChat(1001); break;
-                case "ChatEmbeds":
-                    if(Date.now() - PageManager.embeds.last_check < 60 * 1000 && PageManager.embeds.value !== undefined) {
-                        return this.chatConnection.onMessage({ 
-                            EventMessage: { 
-                                type: 'embeds', 
-                                data: PageManager.embeds.value,
-                                time: PageManager.embeds.last_check
-                            }
-                        });
-                    } 
-                    
-                    Log("Fetching Embeds!");
-                    this.chatConnection.sendChat({ request: 'embeds' });
-                    break;
-                default:
-                    break;
-            }
-    
-            switch(e.target.dataset?.click) {
-                case "toggle-settings-group":
-                    e.target.parentElement.classList.toggle('closed');
-                    break;
-                case "sync-data":
-                    this.SetDataForSettingsElement(e.target);
-                    this.SaveSettings();
-                    break;
-                case "set-embed":
-                    this.embedManager.setEmbed(...(e.target.dataset?.clickArgs.split('|') ?? [])); break;
-                default:
-                    break;
-            }
-        });
-    
-        const getValue = () => {
-            let msg = this.input.value;
-            if(msg !== '' && msg != undefined) {
-                this.chatConnection.sendChat(msg); this.input.value = "";
-            }
-            this.input.focus();
-        }
-    
-        const ToggleSettings = () => {
-            if(!(this.settingsElem instanceof Element))
-                return Log("No settings element.");
-    
-            const settings_button = document.getElementById("ChatSettingsButton");
-            const open = !this.settingsElem.classList.contains('hide');
-            let currently_open = this.settingsElem.classList.toggle('hide', open);
-            settings_button.classList.toggle('negative', !currently_open);
-        }
-        
-        const RemoveChat = (code) => { if(frame instanceof Element) { frame.classList.add('hide'); } this.chatConnection.disconnect(code); }
+        document.addEventListener('DOMContentLoaded', () => { this.onPageLoad(); })
     }
+
+    onPageLoad() {
+
+        // Elems
+        this.#embedManager = new EmbedManager(document.getElementById('EmbedWindow'), this);
+        this.#chatSocket = new ChatSocket(window.location, this);
+        this.#chatElems = {
+            frame: document.getElementById("ChatWindow"),
+            list: document.getElementById("ChatMessageList"),
+            input: document.getElementById("ChatInput"),
+            submit: document.getElementById("ChatSend"),
+            status: document.getElementById("ChatStatus")
+        }
+
+        // Settings
+        this.#settings = {};
+        Log("Load Settings:", this.LoadSettings(this.settings, true));
+    
+        // Events
+        this.#chatElems.input.addEventListener('keydown', (e) => { this.onKeyPress(e); });
+        document.addEventListener('click', (e) => { this.onClick(e); });
+    }
+
+    getInputValue() { return this.#chatElems?.input?.value; }
+    setInputValue(value = "", focus = true) {
+        if(!(this.#chatElems.input instanceof Element))
+            return Log("No input element.");
+
+        this.#chatElems.input.value = value ?? "";
+        if(!!focus) { this.#chatElems.input.focus(); }
+    }
+
+    toggleSettings() {
+        const settings_page = document.getElementById("ChatSettings");
+        const settings_button = document.getElementById("ChatSettingsButton");
+        if(!(settings_page instanceof Element) || !(settings_button instanceof Element))
+            return Log("No settings element.");
+
+        let open = !settings_page.classList.contains('hide');
+        let currently_open = settings_page.classList.toggle('hide', open);
+        settings_button.classList.toggle('negative', !currently_open);
+    }
+
+    // #region Event Listeners
+    onKeyPress(e) {
+        const shiftEnterIgnore = true;
+        if((e.code == "Enter" || e.code == "NumpadEnter") && (!e.shiftKey || shiftEnterIgnore)) {
+            e.preventDefault(); this.#chatSocket.sendChat(this.getInputValue());
+        }
+    }
+
+    onClick(e) {
+        switch(e.target.id) {
+            case "ChatSend":
+                this.#chatSocket.sendChat(this.getInputValue()); break;
+            case "ChatSettingsButton":
+                this.toggleSettings(); break;
+            case "ChatPopoutButton":
+                window.open(this.#chatSocket.loc.origin + '/chat', '_blank', 
+                    'location=yes,height=900,width=300,scrollbars=no,status=yes');
+                this.#chatSocket.removeChatWindow(1000); break;
+            case "ChatCloseButton":
+                this.#chatSocket.removeChatWindow(1001); break;
+            case "ChatEmbeds":
+                let time_check = Date.now() - this.#embeds.last_check < this.#embeds.cache_time * 1000;
+                if(time_check && this.#embeds.value !== undefined) {
+                    return this.chatConnection.onMessage({ 
+                        EventMessage: { 
+                            type: 'embeds', 
+                            data: this.#embeds.value,
+                            time: this.#embeds.last_check
+                        }
+                    });
+                } 
+                
+                Log("Fetching Embeds!");
+                this.chatConnection.sendChat({ request: 'embeds' });
+                break;
+            default:
+                break;
+        }
+
+        switch(e.target.dataset?.click) {
+            case "toggle-settings-group":
+                e.target.parentElement.classList.toggle('closed');
+                break;
+            case "sync-data":
+                this.SetDataForSettingsElement(e.target);
+                this.SaveSettings();
+                break;
+            case "set-embed":
+                this.embedManager.setEmbed(...(e.target.dataset?.clickArgs.split('|') ?? [])); break;
+            default:
+                break;
+        }
+    }
+    // #endregion
 
     // TODO - add profiles to settings, so logging out doesnt remove some settings missing by role
     // #region Settings Automation
@@ -122,10 +142,7 @@ class PageManager {
         };
 
         if(typeof(str) === 'string') {
-            try {
-                let data = JSON.parse(str);
-                json = data;
-            } catch(err) {}
+            try { let data = JSON.parse(str); json = data; } catch(err) {}
         }
 
         if(forceElementSync) { json = this.BuildJsonStructure(json); }
@@ -182,9 +199,7 @@ class PageManager {
     SetDataForSettingsElement = (elem, valueOverride = undefined) => {
         const _idToObj = (str) => { 
             let args = str.split('-'); let output = args.shift();
-            return output + args.map(val => { 
-                let s = val.charAt(0).toUpperCase(); return s + val.slice(1); 
-            }).join('');
+            return output + args.map(val => { let s = val.charAt(0).toUpperCase(); return s + val.slice(1); }).join('');
         }
 
         let field = _idToObj(elem.id);
@@ -193,121 +208,50 @@ class PageManager {
 
     BuildJsonStructure = (defaultValues = undefined) => {
         let elems = document.querySelectorAll('[data-sync]');
-        for(let i = 0; i < elems.length; i++) {
-            this.SetDataForSettingsElement(elems[i], defaultValues);
-        }
-
+        for(let i = 0; i < elems.length; i++) { this.SetDataForSettingsElement(elems[i], defaultValues); }
         return this.settings;
     }
     // #endregion
 
-    // #region Chat - will retwrite so its more object oriented
-    ConfigureChat(pageManager) {
-        const secure = window.location.protocol === 'https:';
-        const local = window.location.hostname.includes('localhost');
-        const url = `${local ? '' : 'chat.'}${window.location.host.split(".").slice(-2).join(".")}`;
-        const fullURL = `${secure ? 'wss' : 'ws'}://${url}/`;
-        // Log("Full URL:", fullURL);
-
-        this.chatConnection.connect(fullURL);
-        this.chatConnection.on('message', (event) => {
-            let msg = event.data;
-            if(msg === 'ping')
-                return this.chatConnection.socket.send("pong");
-            
-            try {
-                this.chatConnection.onMessage(JSON.parse(msg));
-            } catch(err) {
-                Log("Error:", err, msg, event);
-                Log("Message Event:", event);
-            }
-        });
-
-        let even = true;
-        this.chatConnection.onMessage = (json) => {
-            Log("JSON:", json);
-            if(json.ServerMessage && !this.chatConnection.embed)
-                serverMessage(json);
-
-            if(json.EventMessage && !this.chatConnection.embed)
-                eventMessage(json);
-
-            if(json.MessageQueue)
-                messageQueue(json);
-
-            if(json.ChatMessage)
-                chatMessage(json);
-        }
-
-        const chatMessage = (json) => {
-            const badges = (roles) => {
-                let badgeStr = "";
-                for(let i = 0; i < roles.length; i++) {
-                    badgeStr += `<img class="user-badge" src="${msg.roles[0].icon}" title="${msg.roles[0].name}"></img>`
-                }
-
-                return badgeStr;
+    // #region Chat Rendering
+    addChatMessageElem(data) {
+        const badges = (roles) => {
+            let badgeStr = "";
+            for(let i = 0; i < roles.length; i++) {
+                badgeStr += `<img class="user-badge" src="${msg.roles[0].icon}" title="${msg.roles[0].name}"></img>`
             }
 
-            let msg = json.ChatMessage;
-            let elem = document.createElement('div');
-            elem.classList.add('chat-message', even ? undefined : 'odd');
-            even = !even;
-            elem.innerHTML = `
-                <p>
-                    <span class="user-tag" style="color: ${msg.roles[0]?.color ?? '#ffffff'}">
-                        ${badges(msg.roles)}
-                        ${msg.username}</span>:
-                    ${msg.message}
-                </p>
-            `;
-        
-            pageManager.chat.appendChild(elem);
+            return badgeStr;
         }
 
-        const serverMessage = (json) => {
-            // Will change to icon/status symbol instead of text
-            let code = json.ServerMessage?.code;
-            if(typeof(code) === 'number') {
-                if(code === 1) { pageManager.status.textContent = "Connected" }
-                else { pageManager.status.textContent = "" }
-            }
+        let elem = document.createElement('div');
+        elem.classList.add('chat-message', this.#even ? undefined : 'odd');
+        this.#even = !this.#even;
+        elem.innerHTML = `
+            <p><span class="user-tag" style="color: ${data.roles[0]?.color ?? '#ffffff'}">
+                    ${badges(data.roles)}${data.username}</span>: ${data.message}</p>
+        `;
+    
+        return this.#chatElems.list.appendChild(elem);
+    }
 
-            let msg = json.ServerMessage;
-            let elem = document.createElement('div');
-            elem.classList.add('server-message');
-            even = !even;
-            elem.innerHTML = `
-                <p>${msg.icon ? `<span><img src="${msg.icon}"></span> ` : ''}${msg.message}</p>
-            `;
-
-            pageManager.chat.appendChild(elem);
+    addServerMessageElem(data) {
+        // Will change to icon/status symbol instead of text
+        let code = data?.code;
+        if(typeof(code) === 'number') {
+            if(code === 1) { this.#chatElems.status.textContent = "Connected" }
+            else { this.#chatElems.status.textContent = "" }
         }
 
-        const eventMessage = (json) => {
-            let event = json.EventMessage;
-            let type = event.type;
-            switch(type) {
-                case 'live-status-change':
-                    pageManager.embedManager.handleLiveState(); break;
-                case 'embed': // applies to setting embed stream
-                    pageManager.embedManager.setEmbedDirectly(event.url, event.meta); break;
-                case 'embeds': // msg with current user embeds
-                    PageManager.embeds = { last_check: event.time ?? Date.now(), value: event.data };
-                    renderEventMessage(event);
-                    break;
-                default:
-                    break;
-            }
-        }
+        let elem = document.createElement('div');
+        elem.classList.add('server-message');
+        // if even is effected, change it here
+        elem.innerHTML = `<p>${data.icon ? `<span><img src="${data.icon}"></span> ` : ''}${data.message}</p>`;
 
-        const messageQueue = (json) => {
-            let list = json.MessageQueue;
-            for(let i = 0; i < list.length; i++) {
-                try { chatMessage(JSON.parse(list[i])); } catch(err) { console.log("Error Parsing JSON Queue:", err); }
-            }
-        }
+        return this.#chatElems.list.appendChild(elem);
+    }
 
+    handleEventMessage(event) {
         const renderEventMessage = (json) => {
             console.log("Rendering Event Message:", json);
             switch(json.type) {
@@ -317,21 +261,40 @@ class PageManager {
                     let msg = document.createElement('p');
                     msg.classList.add('event-message');
                     msg.innerHTML = `Current Embeds:<br>${elems.join('<br>')}`;
-                    pageManager.chat.appendChild(msg);
-                    break;
+                    return this.#chatElems.list.appendChild(msg);
                 default:
                     break;
             }
+        }
+
+        let type = event.type;
+        switch(type) {
+            case 'live-status-change':
+                pageManager.embedManager.handleLiveState(); break;
+            case 'embed': // applies to setting embed stream
+                pageManager.embedManager.setEmbedDirectly(event.url, event.meta); break;
+            case 'embeds': // msg with current user embeds
+                this.#embeds = {
+                    cache_time: this.#embeds.cache_time ?? 60,
+                    last_check: event.time ?? Date.now(), 
+                    value: event.data 
+                };
+
+                // Copy dgg embed style at top/figure out something similar
+                return renderEventMessage(event);
+            default:
+                break;
         }
     }
     // #endregion
 }
 
+// needs hash management for embed support, server is ready - todo
 class EmbedManager {
 
     _embeds = [];
 
-    constructor(embedElem) {}
+    constructor(embedElem, pageManager) {}
 
     setEmbedDirectly(url, meta) {
         // server is responsible for direct iframe info
@@ -347,35 +310,91 @@ class EmbedManager {
 }
 
 class ChatSocket {
-    constructor(loc) {
-        //Log("Loaded:", loc); // Should do maps here
-        this.loc = loc;
+    constructor(frameElem, pageManager) {
+        this.loc = window.location;
 
-        // embed on stream, ignores events/server msg
+        this.frameElem = frameElem;
+        this.pageManager = pageManager;
+
+        // Embeded on Stream, Ignores Server/Event Messages
         this.embed = loc?.pathname?.indexOf('/embed') >= 0 ?? false;
 
         this.events = new Map();
 
         this.currentChatEvent = null;
         this.chatEventHistory = [];
+
+        this.onLoad();
     }
 
-    connect = (url) => {
-        this.socket = new WebSocket(url);
-        for(let [key, value] of this.events) {
-            this.socket.on(key, value);
+    onLoad() {
+        // Chat URL Parser
+        const secure = window.location.protocol === 'https:';
+        const local = window.location.hostname.includes('localhost');
+        const url = `${local ? '' : 'chat.'}${window.location.host.split(".").slice(-2).join(".")}`;
+        const fullURL = `${secure ? 'wss' : 'ws'}://${url}/`;
+
+        this.connect(fullURL);
+        this.on('message', (event) => {
+            let msg = event.data;
+            if(msg === 'ping') { return this.socket.send("pong"); }
+            
+            try {
+                onMessage(JSON.parse(msg));
+            } catch(err) {
+                Log("Error:", err, msg, event);
+                Log("Message Event:", event);
+            }
+        });
+
+        const onMessage = (json) => {
+            Log("JSON:", json);
+            if(json.ServerMessage && !this.embed)
+                serverMessage(json);
+
+            if(json.EventMessage && !this.embed)
+                eventMessage(json);
+
+            if(json.MessageQueue)
+                messageQueue(json);
+
+            if(json.ChatMessage)
+                chatMessage(json);
+        }
+
+        const chatMessage = (json) => {
+            this.pageManager.addChatMessageElem(json.chatMessage);
+        }
+
+        const serverMessage = (json) => {
+            this.pageManager.addServerMessageElem(json.ServerMessage)
+        }
+
+        const eventMessage = (json) => {
+            this.pageManager.handleEventMessage(json.EventMessage);
+        }
+
+        const messageQueue = (json) => {
+            let list = json.MessageQueue;
+            for(let i = 0; i < list.length; i++) {
+                try { chatMessage(JSON.parse(list[i])); } catch(err) { console.log("Error Parsing JSON Queue:", err); }
+            }
         }
     }
 
-    disconnect = (code) => {
+    connect(url) {
+        this.socket = new WebSocket(url);
+        for(let [key, value] of this.events) { this.socket.on(key, value); }
+    }
+
+    disconnect(code) {
         // add message to the ui to show disconnect - todo
         this.socket.close(code ?? 1001, "Closed by user.");
-        this.channel_name = undefined;
         this.events = new Map();
     }
 
-    sendChat = (value) => {
-        if(!(this.socket instanceof WebSocket))
+    sendChat(value) {
+        if(!(this.socket instanceof WebSocket) || typeof(value) !== 'string' || value == "")
             return;
         
         console.log("Value Type:", typeof(value), value);
@@ -395,7 +414,12 @@ class ChatSocket {
 
         if(addMessage) {  msg.message = value; }
         this.socket.send(JSON.stringify(msg));
-        //Log("Send Value:", value);
+        // add chat elem here if local is required
+    }
+
+    removeChatWindow(code) {
+        if(this.frameElem instanceof Element) { this.frameElem.classList.add('hide'); } 
+        this.disconnect(code);
     }
 
     on(event, callback) {
@@ -405,4 +429,5 @@ class ChatSocket {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => { new PageManager(); });
+// Access with Window or PageManager.instance
+window.PageManager = new PageManager();
