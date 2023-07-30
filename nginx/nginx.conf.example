@@ -1,0 +1,11 @@
+upstream loadbalancer {
+    server app:|PORT|;
+}
+
+server {
+    listen 80;
+    server_name |DOMAIN|;
+    location / {
+        proxy_pass http://loadbalancer;
+    }
+}

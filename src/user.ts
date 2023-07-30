@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 
 export enum Status {
-    VALID = 1 << 0, // also works as "follows" per channel
+    VALID = 1 << 0,
     BANNED = 1 << 1,
     MUTED = 1 << 2
 }
@@ -18,7 +18,7 @@ const valToRI = (val: number, str: string, hex: string = "#ffffff") => {
     return { name: str, icon: `/assets/badges/${nameToURL(str)}.svg`, value: val, color: hex };
 }
 
-// Change to Fit Client - Might move subscriptions to its own field
+// Change to Fit Client - Subs moving to own field
 const roleData: RoleInterface[] = [
     valToRI(1 << 0, 'Owner', '#ff0000'),
     valToRI(1 << 1, 'Admin', '#ff5c00'),
@@ -26,11 +26,11 @@ const roleData: RoleInterface[] = [
     valToRI(1 << 3, 'VIP'),
     valToRI(1 << 4, 'Contributor'),
     valToRI(1 << 5, 'Bot'),
-    valToRI(1 << 6, 'Sub1'),
-    valToRI(1 << 7, 'Sub2'),
-    valToRI(1 << 8, 'Sub3'),
-    valToRI(1 << 9, 'Sub4'),
-    valToRI(1 << 10, 'Sub5')
+    // valToRI(1 << 6, 'Sub1'),
+    // valToRI(1 << 7, 'Sub2'),
+    // valToRI(1 << 8, 'Sub3'),
+    // valToRI(1 << 9, 'Sub4'),
+    // valToRI(1 << 10, 'Sub5')
 ]
 
 export const RoleValue: { [key: string]: number } = {};
@@ -59,7 +59,8 @@ export interface UserData {
     status: number,
     age: number,
     connections: UserConnection | UserConnectionDB,
-    records: UserRecord[]
+    records: UserRecord[],
+    subscriptions: UserSub[]
 }
 
 export interface UserConnection {
@@ -78,6 +79,12 @@ export interface UserConnectionDB {
     discord_name: string
 }
 
+export interface UserSub {
+    platform: string,
+    expires: number,
+    level: number
+}
+
 export class User {
     static GenerateUUID() { return uuidv4(); }
     static ValidUserData(data: UserData | User | any) {
@@ -92,6 +99,26 @@ export class User {
         data.status = [...data?.records]?.reduce((pv, cv) => pv | cv.type, 0) ?? undefined;
         return data;
     }
+    static GetUserConnection(connection: UserConnection | UserConnectionDB) {
+        if((connection as UserConnectionDB)?.user_id) {
+            return {
+                twitch: { 
+                    id: (connection as UserConnectionDB)?.twitch_id ?? undefined,
+                    name: (connection as UserConnectionDB)?.twitch_name ?? undefined
+                },
+                youtube: { 
+                    id: (connection as UserConnectionDB)?.youtube_id ?? undefined,
+                    name: (connection as UserConnectionDB)?.youtube_name ?? undefined
+                },
+                discord: { 
+                    id: (connection as UserConnectionDB)?.discord_id ?? undefined,
+                    name: (connection as UserConnectionDB)?.discord_name ?? undefined
+                }
+            }
+        } else {
+            return connection as UserConnection;
+        }
+    }
 
     private data: UserData;
 
@@ -103,38 +130,20 @@ export class User {
             valid: data?.valid ?? true,
             status: data?.status ?? 0,
             age: data?.age ?? Date.now(),
-            connections: (data?.connections as UserConnectionDB)?.user_id ? {
-                twitch: { 
-                    id: (data?.connections as UserConnectionDB)?.twitch_id ?? undefined,
-                    name: (data?.connections as UserConnectionDB)?.twitch_name ?? undefined
-                },
-                youtube: { 
-                    id: (data?.connections as UserConnectionDB)?.youtube_id ?? undefined,
-                    name: (data?.connections as UserConnectionDB)?.youtube_name ?? undefined
-                },
-                discord: { 
-                    id: (data?.connections as UserConnectionDB)?.discord_id ?? undefined,
-                    name: (data?.connections as UserConnectionDB)?.discord_name ?? undefined
-                },
-            } : data?.connections as UserConnection ?? {},
-            records: data?.records ?? []
+            connections: User.GetUserConnection(data?.connections),
+            records: data?.records ?? [],
+            subscriptions: data?.subscriptions ?? []
         }
     }
 
     public toJSON() { return this.data; }
     public getUUID() { return this.data.uuid; }
     public getName() { return this.data.name; }
-    public getAge() { return Date.now() - this.data.age; }
-    public getRoles() {
-        let keys = Object.keys(Roles); let roles = [];
-        for(let i = 0; i < keys.length; i++) {
-            if(Roles[keys[i]].value & (this.data?.roles ?? 0)) { roles.push(Roles[keys[i]]); }
-        }
-
-        return roles.sort((a, b) => a.value - b.value);
-    }
+    public getAge() { return this.data.age; } // (Date.now() -) for actual age, this returns creation timestamp
     public getRoleValue() { return this.data.roles; }
     public getStatus() { return this.data.status; }
+    public getSubscriptions() { return this.data.subscriptions; }
+
     public getEffectiveStatus() {
         let status = this.data.status ?? 0; let records = this.data.records ?? [];
         for(let i = 0; i < records.length; i++) {
@@ -143,6 +152,15 @@ export class User {
         }
 
         return status;
+    }
+
+    public getRoles() {
+        let keys = Object.keys(Roles); let roles = [];
+        for(let i = 0; i < keys.length; i++) {
+            if(Roles[keys[i]].value & (this.data?.roles ?? 0)) { roles.push(Roles[keys[i]]); }
+        }
+
+        return roles.sort((a, b) => a.value - b.value);
     }
 }
 
