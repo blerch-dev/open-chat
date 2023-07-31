@@ -25,12 +25,7 @@ const roleData: RoleInterface[] = [
     valToRI(1 << 2, 'Mod', '#ffff00'),
     valToRI(1 << 3, 'VIP'),
     valToRI(1 << 4, 'Contributor'),
-    valToRI(1 << 5, 'Bot'),
-    // valToRI(1 << 6, 'Sub1'),
-    // valToRI(1 << 7, 'Sub2'),
-    // valToRI(1 << 8, 'Sub3'),
-    // valToRI(1 << 9, 'Sub4'),
-    // valToRI(1 << 10, 'Sub5')
+    valToRI(1 << 5, 'Bot')
 ]
 
 export const RoleValue: { [key: string]: number } = {};

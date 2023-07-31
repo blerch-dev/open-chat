@@ -245,7 +245,7 @@ class PlatformManager {
     } = {};
 
     // Will Use OBS Ingress Info from Server to Determine If Interval Should Run (or can ignore)
-    private ShouldRunChecks: boolean = true;
+    private ShouldRunChecks: boolean = false;
     private CheckForLive: boolean | undefined = undefined;
 
     private Interval: NodeJS.Timer | undefined;

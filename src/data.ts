@@ -53,7 +53,7 @@ const FormatDBString = (hardFormat = false) => {
         PRIMARY KEY ("id")
     );
 
-    ${hardFormat ? 'DROP TABLE IF EXISTS user_status_effects;' : ''}
+    ${hardFormat ? 'DROP TABLE IF EXISTS user_subscriptions;' : ''}
     CREATE TABLE IF NOT EXISTS "user_subscriptions" (
         "id"                    serial,
         "user_id"               uuid NOT NULL,

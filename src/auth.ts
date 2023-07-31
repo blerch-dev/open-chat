@@ -18,11 +18,21 @@ export class Authenticator {
 
     private async waitForSession(req: any, res: any) {
         // any checks needed
+
         return true;
     }
 
+    private async handleAutoSession(req: any, res: any, user: User) {
+        // todo - create session if possible (and not already present)
+            // return if session is created (ValidAuthPage Redirect)
+
+        // if session is present, and auto session is not, set up
+    }
+
     public async handleUserAuth(req: any, res: any, next: any, user: any, userdata: any = {}) {
-        if(user instanceof Error) { return res.send(SignUpPage(req, res, this.server.getProps(), userdata)); }
+        if(req.session.user) { await this.syncAccount(req, res, userdata) }
+        else if(user instanceof Error) { return res.send(SignUpPage(req, res, this.server.getProps(), userdata)); }
+
         user = user as User; req.session.user = user.toJSON();
         if(await this.waitForSession(req, res)) {
             return res.send(ValidAuthPage(req, res, this.server.getProps(), user.getName()));
@@ -30,7 +40,7 @@ export class Authenticator {
 
         return res.send(ErrorPage(req, res, this.server.getProps(), {
             Message: "Failed to Auth User.", Code: 0x0104
-        }))
+        }));
     }
 
     public async createAccount(req: any, res: any, next: any) {
@@ -83,6 +93,12 @@ export class Authenticator {
         }
 
         return res.json({ Error: "Issue with generated user info, try again later.", Code: 0x0103 });
+    }
+
+    private async syncAccount(req: any, res: any, connection: any) {
+        if(!req.session?.user) { return; }
+        // if platform connection already present, ignore
+        // add if not present
     }
 
     // #region Twitch
@@ -144,6 +160,10 @@ class TwitchAuth {
             }
         })).json())?.data?.[0];
     }
+
+    static CheckSubscriptions = async () => {
+
+    }
 }
 
 class YoutubeAuth {
@@ -183,5 +203,9 @@ class YoutubeAuth {
         });
 
         return await promise as any;
+    }
+
+    static CheckSubscriptions = async () => {
+
     }
 }
