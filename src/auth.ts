@@ -18,12 +18,12 @@ export class Authenticator {
 
     private async waitForSession(req: any, res: any) {
         // any checks needed
-
         return true;
     }
 
     public async handleAutoSession(req: any, res: any) {
         if(req.session.user || !req.cookies.ssi || !req.cookies.ssi_token) { return; }
+        //let selector
         // todo - create session if possible (and not already present)
             // return if session is created (ValidAuthPage Redirect)
     }

@@ -20,6 +20,20 @@ const FormatDBString = (hardFormat = false) => {
         PRIMARY KEY ("uuid")
     );
 
+    ${hardFormat ? 'DROP TABLE IF EXISTS users;' : ''}
+    CREATE TABLE IF NOT EXISTS "user_codes" (
+        "code"          varchar(32) UNIQUE NOT NULL,
+        "created_at"    timestamp without time zone NOT NULL DEFAULT NOW(),
+        "expires"       timestamp without time zone DEFAULT NOW() + interval '1 day',
+        "roles"         bigint NOT NULL DEFAULT 0,
+        "uses"          bitint DEFAULT 1,
+        PRIMARY KEY ("code")
+    );
+
+    ${process.env.ADMIN_CODE ? `
+    INSERT INTO user_codes (code, roles) VALUES (${process.env.ADMIN_CODE}, 2);
+    ` : ''}
+
     ${hardFormat ? 'DROP TABLE IF EXISTS user_connections;' : ''}
     CREATE TABLE IF NOT EXISTS "user_connections" (
         "user_id"       uuid NOT NULL,
@@ -36,7 +50,9 @@ const FormatDBString = (hardFormat = false) => {
     CREATE TABLE IF NOT EXISTS "user_tokens" (
         "user_id"               uuid NOT NULL,
         "selector"              varchar(12) NOT NULL,
+        "salt"                  varchar(64),
         "hashed_validator"      varchar(128) NOT NULL,
+        "created_at"            timestamp without time zone NOT NULL DEFAULT NOW(),
         "expires"               timestamp without time zone NOT NULL,
         PRIMARY KEY ("selector")
     );
@@ -332,20 +348,57 @@ export class DatabaseConnection {
     // #endregion
 
     // #region Tokens
-    private async createTokenParts(user_id: string, expires = 7 * 4) {
+    private async createTokenParts() {
         let data = generateSelectorAndValidator();
-        let hash_output = await hashValue(data.validator);
+        let hash_output = await hashValue(data.validator, process.env.HASH_CODE);
         if(hash_output instanceof Error) { console.log("Error Generating Hash:", hash_output); return hash_output; }
-        return { selector: data.selector, validator: data.validator, hash: hash_output.hash };
+        return { selector: data.selector, validator: data.validator, hash: hash_output.hash, salt: hash_output.salt };
     }
 
-    public async getUserTokenBySelector(user_id: string, selector?: string) {
-        // if no selector, return all user tokens
+    public async getTokenBySelector(selector: string) {
+        if(!(await this.waitForConnection())) { return this.ConnectionError; }
+
+        let query = 'SELECT * FROM user_tokens WHERE selector = $1';
+        let result = await this.queryDB(query, selector);
+        if(result instanceof Error)
+            return result;
+
+        return this.parseQueryResult(result);
     }
 
-    public async createUserToken(user_id: string) {
-        let token_parts = await this.createTokenParts(user_id);
-        // add to database, return cookie value (selector-validator)
+    public async createUserToken(user_id: string, expires = 7 * 4) {
+        if(!(await this.waitForConnection())) { return this.ConnectionError; }
+
+        let token_parts = await this.createTokenParts();
+        if(token_parts instanceof Error) { return token_parts; }
+        
+        let timestamp = expires * (24 * 60 * 60 * 1000);
+        let query = 'INSERT INTO user_tokens (selector, user_id, hashed_validator, expires) VALUES ($1, $2, $3, to_timestamp($4))';
+        let result = await this.queryDB(query, token_parts.selector, user_id, token_parts.hash, timestamp);
+        if(result instanceof Error) { return result; }
+
+        return `${token_parts.selector}-${token_parts.validator}`;
+    }
+
+    public async validateTokenSession(token_str: string) {
+        let args = token_str.split('-');
+        let token = await this.getTokenBySelector(args[0]);
+        if(token instanceof Error) { return token; }
+
+        let token_data = token.data[0] as any;
+        console.log(`Validating Token ${token_str}:`, token_data);
+        let token_hash = await hashValue(args[1], token_data.salt ?? process.env.HASH_CODE);
+        if(token_hash instanceof Error) { return token_hash; }
+
+        if(token_hash.hash === token_data.hashed_validator) {
+            return await this.getUser(token_data.user_id);
+        }
+
+        return new Error("Failed to Validate Session from Token.");
+    }
+
+    public async refreshToken(selector: string, expires = 7 * 4) {
+        // called after validation above, will ignore if not close enough - todo
     }
     // #endregion
 
