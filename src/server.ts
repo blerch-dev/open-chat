@@ -153,12 +153,7 @@ export class Server {
         this.app.use('*', async (req, res, next) => {
             req.session.user = User.ValidateUserData(req?.session?.user as UserData);
             // Check if Redis needs user to update from db
-
-            if(req.session?.user == undefined && req.cookies.ssi) {
-                // use ssi cookie to create new session, forward after user session is set
-            }
-
-            // console.log("Session User:", req.session?.cookie?.expires, ' - ', req.originalUrl, ' | ', req.cookies?.['connect.sid']);
+            if(req.session?.user == undefined && req.cookies.ssi) { await this.auth.handleAutoSession(req, res); }
             return next();
         });
 

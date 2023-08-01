@@ -22,11 +22,10 @@ export class Authenticator {
         return true;
     }
 
-    private async handleAutoSession(req: any, res: any, user: User) {
+    public async handleAutoSession(req: any, res: any) {
+        if(req.session.user || !req.cookies.ssi || !req.cookies.ssi_token) { return; }
         // todo - create session if possible (and not already present)
             // return if session is created (ValidAuthPage Redirect)
-
-        // if session is present, and auto session is not, set up
     }
 
     public async handleUserAuth(req: any, res: any, next: any, user: any, userdata: any = {}) {
@@ -35,6 +34,7 @@ export class Authenticator {
 
         user = user as User; req.session.user = user.toJSON();
         if(await this.waitForSession(req, res)) {
+            if(req.cookies.ssi) { await this.setAutoHandle(req, res, user.getUUID()); }
             return res.send(ValidAuthPage(req, res, this.server.getProps(), user.getName()));
         }
 
@@ -99,6 +99,11 @@ export class Authenticator {
         if(!req.session?.user) { return; }
         // if platform connection already present, ignore
         // add if not present
+    }
+
+    private async setAutoHandle(req: any, res: any, user_id: any) {
+        // todo - if token is present, reset and reapply
+        
     }
 
     // #region Twitch

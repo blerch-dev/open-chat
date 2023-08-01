@@ -2,7 +2,7 @@ import { Pool, QueryResult } from 'pg';
 
 import { User, UserData, UserConnection, UserConnectionDB } from './user';
 import { Server } from './server';
-import { sleep } from './tools';
+import { sleep, generateSelectorAndValidator, hashValue } from './tools';
 
 const FormatDBString = (hardFormat = false) => {
     if(hardFormat)
@@ -98,6 +98,7 @@ export class DatabaseConnection {
             .catch((reason) => { this.isConnected = false; /* console.log("DB Error:", reason); */ });
     }
 
+    // #region Helpers
     private async waitForConnection(attempt = 0): Promise<boolean> {
         if(!this.isConnected) {
             if(attempt >= this.maxAttempt) { return false }
@@ -141,6 +142,7 @@ export class DatabaseConnection {
             });
         });
     }
+    // #endregion
 
     // #region User
     private validUser(data: UserData | any = {}): User | Error {
@@ -330,7 +332,21 @@ export class DatabaseConnection {
     // #endregion
 
     // #region Tokens
+    private async createTokenParts(user_id: string, expires = 7 * 4) {
+        let data = generateSelectorAndValidator();
+        let hash_output = await hashValue(data.validator);
+        if(hash_output instanceof Error) { console.log("Error Generating Hash:", hash_output); return hash_output; }
+        return { selector: data.selector, validator: data.validator, hash: hash_output.hash };
+    }
 
+    public async getUserTokenBySelector(user_id: string, selector?: string) {
+        // if no selector, return all user tokens
+    }
+
+    public async createUserToken(user_id: string) {
+        let token_parts = await this.createTokenParts(user_id);
+        // add to database, return cookie value (selector-validator)
+    }
     // #endregion
 
     // #region Twitch
