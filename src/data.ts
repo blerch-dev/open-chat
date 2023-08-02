@@ -1,12 +1,11 @@
 import { Pool, QueryResult } from 'pg';
 
-import { User, UserData, UserConnection, UserConnectionDB } from './user';
 import { Server } from './server';
+import { User, UserData, UserConnection, UserConnectionDB, RoleValue, Roles } from './user';
 import { sleep, generateSelectorAndValidator, hashValue } from './tools';
 
 const FormatDBString = (hardFormat = false) => {
-    if(hardFormat)
-        console.log("Forcing Table Drops!");
+    if(hardFormat) { console.log("Forcing Table Drops!"); }
 
     return `
     ${hardFormat ? 'DROP TABLE IF EXISTS users;' : ''}
@@ -20,19 +19,15 @@ const FormatDBString = (hardFormat = false) => {
         PRIMARY KEY ("uuid")
     );
 
-    ${hardFormat ? 'DROP TABLE IF EXISTS users;' : ''}
+    ${hardFormat ? 'DROP TABLE IF EXISTS user_codes;' : ''}
     CREATE TABLE IF NOT EXISTS "user_codes" (
         "code"          varchar(32) UNIQUE NOT NULL,
         "created_at"    timestamp without time zone NOT NULL DEFAULT NOW(),
         "expires"       timestamp without time zone DEFAULT NOW() + interval '1 day',
         "roles"         bigint NOT NULL DEFAULT 0,
-        "uses"          bitint DEFAULT 1,
+        "uses"          bigint DEFAULT 1,
         PRIMARY KEY ("code")
     );
-
-    ${process.env.ADMIN_CODE ? `
-    INSERT INTO user_codes (code, roles) VALUES (${process.env.ADMIN_CODE}, 2);
-    ` : ''}
 
     ${hardFormat ? 'DROP TABLE IF EXISTS user_connections;' : ''}
     CREATE TABLE IF NOT EXISTS "user_connections" (
@@ -75,7 +70,7 @@ const FormatDBString = (hardFormat = false) => {
         "user_id"               uuid NOT NULL,
         "level"                 smallint NOT NULL DEFAULT 0,
         "platform"              varchar(32) NOT NULL,
-        "expires"               timestamp without time zone NOT NULL DEFAULT NOW() + interval '30 days',
+        "expires"               timestamp without time zone DEFAULT NOW() + interval '30 days',
         PRIMARY KEY ("id")
     );
     `;
@@ -89,7 +84,15 @@ interface QueryOutput {
 export class DatabaseConnection {
     static FormatDatabase = async (hardFormat = false) => {
         let db = new DatabaseConnection();
-        return await db.queryDB(FormatDBString(hardFormat));
+        let result = await db.queryDB(FormatDBString(hardFormat));
+        if(result instanceof Error) { return result; }
+
+        let code = process.env.ADMIN_CODE || null, value = RoleValue.ADMIN ?? Roles.Admin.value;
+        if(hardFormat && code) { 
+            result = await db.queryDB(`INSERT INTO user_codes (code, roles) VALUES ($1, $2);`, code, value);
+        }
+
+        return result;
     }
 
     private server: Server | undefined;

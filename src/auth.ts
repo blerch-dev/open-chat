@@ -123,7 +123,9 @@ export class Authenticator {
 
     // #region Youtube
     public authYoutube(req: any, res: any, next: any) {
-        return res.redirect(YoutubeAuth.OAuthLink(this.server.getProps()?.domain + '/verify/youtube'));
+        let redirect = this.server.getProps()?.domain + '/verify/youtube';
+        console.log("Authing Redirect for Youtube:", redirect)
+        return res.redirect(YoutubeAuth.OAuthLink(redirect));
     }
 
     public async verifyYoutube(req: any, res: any, next: any) {
