@@ -53,6 +53,7 @@ export interface UserData {
     valid: boolean,
     status: number,
     age: number,
+    created_at?: number,
     connections: UserConnection | UserConnectionDB,
     records: UserRecord[],
     subscriptions: UserSub[]
@@ -83,16 +84,29 @@ export interface UserSub {
 export class User {
     static GenerateUUID() { return uuidv4(); }
     static ValidUserData(data: UserData | User | any) {
-        if(data instanceof User) { return data; }
-        return data?.uuid && data?.name;
+        return data instanceof User || (!!data?.uuid && !!data?.name);
     }
     static ValidateUserData(data: UserData) {
-        if(!data)
-            return undefined;
+        if(!data) { return undefined; }
 
-        data.records = data?.records?.filter((val) => val.expires <= Date.now()) ?? undefined;
-        data.status = [...data?.records]?.reduce((pv, cv) => pv | cv.type, 0) ?? undefined;
+        data.age = (new Date(data?.age ?? data?.created_at ?? Date.now())).getTime();
+        data.records = data?.records?.filter((val) => val.expires <= Date.now()) ?? [];
+        data.status = [...data?.records]?.reduce((pv, cv) => pv | cv.type, 0) ?? 0;
+        // subscriptions
         return data;
+
+        // From Data - Might be better
+        /*
+            data.age = (new Date(data.created_at)).getTime();
+
+            let records = data.records.filter((val: any) => val != null);
+            data.records = records.filter((val: any) => { 
+                let expired = (new Date(val.expires ?? Date.now())).getTime() < Date.now();
+                return !expired;
+            });
+
+            data.status = [...data.records].reduce((pv, cv) => pv | cv.type, 0);
+        */
     }
     static GetUserConnection(connection: UserConnection | UserConnectionDB) {
         if((connection as UserConnectionDB)?.user_id) {

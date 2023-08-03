@@ -83,7 +83,7 @@ export class Authenticator {
 
             req.session.user = (user as User).toJSON();
             if(await this.waitForSession(req, res)) {
-                return res.json({ Redirect: '/profile' });
+                return res.json({ Redirect: '/profile' }); // might send to valid auth page as well, but works for now
             }
     
             return res.json({ 
@@ -99,6 +99,8 @@ export class Authenticator {
         if(!req.session?.user) { return; }
         // if platform connection already present, ignore
         // add if not present
+
+        // continues to create account, needs to terminate response here if session
     }
 
     private async setAutoHandle(req: any, res: any, user_id: any) {
@@ -116,7 +118,7 @@ export class Authenticator {
         let info = await TwitchAuth.GetInfoFromToken(tokens);
         let user = await this.server.getDatabaseConnection().getUserFromTwitchID(info?.id ?? "");
         return await this.handleUserAuth(req, res, next, user, { 
-            twitch: { id: info?.id, name: info?.display_name ?? info?.login },
+            twitch: { id: info?.id, name: info?.display_name ?? info?.login, backup_names: [info?.login] },
         });
     }
     // #endregion
@@ -124,19 +126,20 @@ export class Authenticator {
     // #region Youtube
     public authYoutube(req: any, res: any, next: any) {
         let redirect = this.server.getProps()?.domain + '/verify/youtube';
-        console.log("Authing Redirect for Youtube:", redirect)
+        YoutubeAuth.getClient(redirect);
         return res.redirect(YoutubeAuth.OAuthLink(redirect));
     }
 
     public async verifyYoutube(req: any, res: any, next: any) {
         let tokens = await YoutubeAuth.GetTokens(req);
-        if(this.debug) { console.log("Youtube Tokens:", tokens); }
+        // if(this.debug) { console.log("Youtube Tokens:", tokens); }
         let info = await YoutubeAuth.GetInfoFromToken(tokens);
-        if(this.debug) { console.log("Youtube Data:", info); }
+        let snip = info?.snippet;
+        // if(this.debug) { console.log("Youtube Data:", info); }
 
         let user = await this.server.getDatabaseConnection().getUserFromYoutubeID(info?.id ?? "");
-        return await this.handleUserAuth(req, res, next, user, { 
-            youtube: { id: info?.id, name: info?.username }, // placeholder username field name
+        return await this.handleUserAuth(req, res, next, user, {
+            youtube: { id: info?.id, name: snip?.title, backup_names: [(snip?.customUrl as string).slice(1)] }
         });
     }
     // #endregion
@@ -175,11 +178,20 @@ class TwitchAuth {
 
 class YoutubeAuth {
     private static service = google.youtube({ version: 'v3' });
-    private static client = new google.auth.OAuth2(
-        process.env.YOUTUBE_ID, 
-        process.env.YOUTUBE_SECRET,
-        `https://www.${process.env.ROOT_URL}/auth/youtube`
-    );
+
+    private static redirect_uri: string | undefined;
+    private static client: any | undefined;
+
+    static getClient = (redirect: string) => {
+        if(YoutubeAuth.client && YoutubeAuth.redirect_uri === redirect) { return YoutubeAuth.client; }
+        YoutubeAuth.client = new google.auth.OAuth2(
+            process.env.YOUTUBE_ID, 
+            process.env.YOUTUBE_SECRET,
+            redirect
+        );
+
+        return YoutubeAuth.client;
+    }
 
     static OAuthLink = (redirect: string) => this.client.generateAuthUrl({
         access_type: 'offline',
@@ -200,7 +212,7 @@ class YoutubeAuth {
                 maxResults: 1,
                 part: ['snippet'],
                 mine: true
-            }, (err, resp) => {
+            }, (err: any, resp: any) => {
                 if(err) { console.log(err); rej(err); }
                 if(resp?.data?.pageInfo?.totalResults == 0)
                     return rej(new Error("No Youtube channel for Google account."));
@@ -209,7 +221,8 @@ class YoutubeAuth {
             });
         });
 
-        return await promise as any;
+        let result = await promise as any;
+        return result;
     }
 
     static CheckSubscriptions = async () => {

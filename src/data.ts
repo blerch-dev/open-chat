@@ -165,15 +165,7 @@ export class DatabaseConnection {
 
     // #region User
     private validUser(data: UserData | any = {}): User | Error {
-        data.age = (new Date(data.created_at)).getTime();
-
-        let records = data.records.filter((val: any) => val != null);
-        data.records = records.filter((val: any) => { 
-            let expired = (new Date(val.expires ?? Date.now())).getTime() < Date.now();
-            return !expired;
-        });
-
-        data.status = [...data.records].reduce((pv, cv) => pv | cv.type, 0);
+        data = User.ValidateUserData(data);
         return User.ValidUserData(data) ? new User(data) : Error("Invalid User Data.");
     }
 
@@ -218,11 +210,11 @@ export class DatabaseConnection {
             return Error("Issue adding connection to DB.");
         }
 
-        query = 'INSERT INTO users (uuid, name, created_at, last_login, roles, status)'
-            + ' VALUES ($1, $2, to_timestamp($3), to_timestamp($4), $5, $6)';
+        query = 'INSERT INTO users (uuid, name, created_at, last_login, roles)'
+            + ' VALUES ($1, $2, to_timestamp($3), to_timestamp($4), $5)';
 
         let time = Math.floor((info?.age ?? 0) / 1000);
-        let values = [info?.uuid, info?.name, time, time, info?.roles, info?.status];
+        let values = [info?.uuid, info?.name, time, time, info?.roles];
         result = await this.queryDB(query, ...values);
         if(result instanceof Error)
             return result;
