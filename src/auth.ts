@@ -29,7 +29,7 @@ export class Authenticator {
     }
 
     public async handleUserAuth(req: any, res: any, next: any, user: any, userdata: any = {}) {
-        if(req.session.user) { await this.syncAccount(req, res, userdata) }
+        if(req.session.user) { return await this.addUserConnection(req, res, userdata) }
         else if(user instanceof Error) { return res.send(SignUpPage(req, res, this.server.getProps(), userdata)); }
 
         user = user as User; req.session.user = user.toJSON();
@@ -68,7 +68,8 @@ export class Authenticator {
             uuid: User.GenerateUUID(),
             name: username ?? null,
             age: Date.now(),
-            connections: json ?? {}
+            connections: json ?? {},
+            roles: await this.server.getDatabaseConnection().getUserCodeValue(code)
         }
 
         // DB function to repeat create and check on conflict, return first available uuid for userdata above - TODO
@@ -95,12 +96,42 @@ export class Authenticator {
         return res.json({ Error: "Issue with generated user info, try again later.", Code: 0x0103 });
     }
 
-    private async syncAccount(req: any, res: any, connection: any) {
-        if(!req.session?.user) { return; }
-        // if platform connection already present, ignore
-        // add if not present
+    private async syncAccount(req: any, res: any, redirect_uri: string) {
+        if(!req.session?.user) { return res.redirect(redirect_uri); }
 
-        // continues to create account, needs to terminate response here if session
+        console.log("Syncing Account:", req.session?.user?.uuid);
+        let user_id = req.session?.user?.uuid;
+        let result = await this.server.getDatabaseConnection().getUser(user_id);
+        console.log("Sync Result:", result);
+        if(result instanceof Error) { return res.redirect(redirect_uri); }
+        req.session.user = result.toJSON();
+        return res.redirect(redirect_uri);
+    }
+
+    private async addUserConnection(req: any, res: any, connection: any) {
+        let keys = Object.keys(connection), pass_obj: any = {}, added_field = false;
+        for(let i = 0; i < keys.length; i++) {
+            if(req.session?.user?.connections[keys[i]]?.id === undefined) {
+                added_field = true;
+                pass_obj[keys[i]] = connection[keys[i]];
+            }
+        }
+
+        if(added_field === false) {
+            console.log("No Field to Add:", connection, req.session.user.connections, pass_obj);
+            return res.redirect('/profile');
+        }
+
+        let result = await this.server.getDatabaseConnection().setConnections(req.session?.user?.uuid, pass_obj);
+        console.log("Set Connections Result:", result);
+        if(result instanceof Error || result === false) {
+            return res.send(ErrorPage(req, res, this.server.getProps(), {
+                Message: "Failed to Add User Connection.", 
+                Code: result === false ? 0x0106 : 0x0105
+            }));
+        }
+
+        return await this.syncAccount(req, res, '/profile');
     }
 
     private async setAutoHandle(req: any, res: any, user_id: any) {

@@ -89,9 +89,10 @@ export class User {
     static ValidateUserData(data: UserData) {
         if(!data) { return undefined; }
 
-        data.age = (new Date(data?.age ?? data?.created_at ?? Date.now())).getTime();
-        data.records = data?.records?.filter((val) => val.expires <= Date.now()) ?? [];
-        data.status = [...data?.records]?.reduce((pv, cv) => pv | cv.type, 0) ?? 0;
+        let corrected_time = data?.created_at ? data.created_at - Date.now() : undefined;
+        data.age = (new Date(data?.age ?? corrected_time ?? Date.now())).getTime();
+        data.records = data?.records?.filter((val) => new Date(val?.expires ?? Date.now()).getTime() <= Date.now()) ?? [];
+        data.status = [...data?.records]?.reduce((pv, cv) => pv | cv?.type ?? 0, 0) ?? 0;
         // subscriptions
         return data;
 

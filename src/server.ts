@@ -132,6 +132,7 @@ export class Server {
         });
 
         const sessionParser = session({
+            name: 'open-chat-auth',
             store: this.redis.store,
             resave: false,
             saveUninitialized: false,
@@ -140,7 +141,7 @@ export class Server {
                 secure: this.isProd(),
                 path: '/',
                 domain: this.isProd() ? `.${process.env.ROOT_URL}` : undefined,
-                sameSite: true,
+                sameSite: 'lax',
                 httpOnly: true,
                 maxAge: ttl
             },

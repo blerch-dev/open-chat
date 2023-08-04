@@ -127,8 +127,8 @@ export class DatabaseConnection {
         return true;
     }
 
-    private async parseQueryResult(res: QueryResult): Promise<QueryOutput> {
-        const data = res.rows?.[0];
+    private parseQueryResult(res: QueryResult): QueryOutput {
+        const data = res.rows?.[0] ?? res.rows;
         // console.log("Parsing Query Result:", res.command, res.rowCount, res.rows, data);
         return { data: data, meta: {
             rowCount: res.rowCount
@@ -183,7 +183,7 @@ export class DatabaseConnection {
         }
 
         if(result instanceof Error) { return result; }
-        return this.validUser((await this.parseQueryResult(result)).data);
+        return this.validUser(this.parseQueryResult(result).data);
     }
 
     public async createUser(data: User | UserData): Promise<User | Error> {
@@ -243,7 +243,7 @@ export class DatabaseConnection {
         }
         
         if(result instanceof Error) { return result; }
-        return (await this.parseQueryResult(result)).deleteCount > 0;
+        return this.parseQueryResult(result).deleteCount > 0;
     }
 
     // Quick Functions
@@ -302,7 +302,7 @@ export class DatabaseConnection {
         if(result instanceof Error)
             return result;
 
-        let current = await this.parseQueryResult(result);
+        let current = this.parseQueryResult(result).data;
 
         query = 'INSERT INTO user_connections (user_id, twitch_id, twitch_name, youtube_id, youtube_name, discord_id, discord_name)'
             + ' VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (user_id) DO UPDATE SET'
@@ -310,10 +310,10 @@ export class DatabaseConnection {
             + ' youtube_id = $4, youtube_name = $5,'
             + ' discord_id = $6, discord_name = $7';
 
-        //console.log("User Connection Data:", data);
+        console.log("Current User Connection Data:", current);
         let getValue = (value: any, name: string) => {
-            let finalValue = overwrite ? value : current[name] ?? !overwrite ? value : current[name] ?? "";
-            //console.log(`Get Value: '${value}', '${current[name]}', '${finalValue}'`);
+            let finalValue = (overwrite ? value : current?.[name]) ?? (!overwrite ? value : current?.[name]) ?? "";
+            // console.log(`Get Value: '${value}',\t '${current?.[name]}',\t '${finalValue}'`);
             return finalValue;
         }
 
@@ -403,7 +403,7 @@ export class DatabaseConnection {
 
         let query = await this.fullUserSearch('WHERE user_connections.twitch_id = $1', id.toString());
         if(query instanceof Error) { return query; }
-        return this.validUser((await this.parseQueryResult(query)).data);
+        return this.validUser(this.parseQueryResult(query).data);
     }
     // #endregion
 
@@ -413,7 +413,20 @@ export class DatabaseConnection {
 
         let query = await this.fullUserSearch('WHERE user_connections.youtube_id = $1', id.toString());
         if(query instanceof Error) { return query; }
-        return this.validUser((await this.parseQueryResult(query)).data);
+        return this.validUser(this.parseQueryResult(query).data);
+    }
+    // #endregion
+
+    // #region User Codes
+    public async getUserCodeValue(code: string) {
+        if(!(await this.waitForConnection())) { return this.ConnectionError; }
+
+        let query_str = 'UPDATE user_codes SET uses = uses - 1 WHERE code = $1 AND uses > $2 AND expires > to_timestamp($3) RETURNING *'
+        let query = await this.queryDB(query_str, code, 0, Date.now() / 1000);
+        if(query instanceof Error || query.rowCount == 0) { return 0; }
+
+        //console.log("Query Result:", query);
+        return this.parseQueryResult(query).data.roles;
     }
     // #endregion
 }
