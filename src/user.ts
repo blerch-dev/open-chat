@@ -86,6 +86,7 @@ export class User {
     static ValidUserData(data: UserData | User | any) {
         return data instanceof User || (!!data?.uuid && !!data?.name);
     }
+
     static ValidateUserData(data: UserData) {
         if(!data) { return undefined; }
 
@@ -109,6 +110,7 @@ export class User {
             data.status = [...data.records].reduce((pv, cv) => pv | cv.type, 0);
         */
     }
+
     static GetUserConnection(connection: UserConnection | UserConnectionDB) {
         if((connection as UserConnectionDB)?.user_id) {
             return {
@@ -128,6 +130,12 @@ export class User {
         } else {
             return connection as UserConnection;
         }
+    }
+
+    static GetFullRoles(value: number) {
+        let keys = Object.keys(Roles); let roles = [];
+        for(let i = 0; i < keys.length; i++) { if(Roles[keys[i]].value & (value ?? 0)) { roles.push(Roles[keys[i]]); } }
+        return roles.sort((a, b) => a.value - b.value);
     }
 
     private data: UserData;
@@ -164,13 +172,6 @@ export class User {
         return status;
     }
 
-    public getRoles() {
-        let keys = Object.keys(Roles); let roles = [];
-        for(let i = 0; i < keys.length; i++) {
-            if(Roles[keys[i]].value & (this.data?.roles ?? 0)) { roles.push(Roles[keys[i]]); }
-        }
-
-        return roles.sort((a, b) => a.value - b.value);
-    }
+    public getRoles() { return User.GetFullRoles(this.data?.roles ?? 0); }
 }
 

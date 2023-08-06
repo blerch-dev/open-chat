@@ -46,10 +46,6 @@ export class Authenticator {
     public async createAccount(req: any, res: any, next: any) {
         const { code, username, data } = req.body;
 
-        // Lookup Code for Role - TODO
-            // could generate uuuids, add to seperate table that describes roles/permissions
-            // would be applied here
-
         let json: { [key: string]: any };
         try {
             json = JSON.parse(data.replace(/'/g, '\"'));
@@ -61,15 +57,14 @@ export class Authenticator {
         }
 
         let validNames = await this.server.getDatabaseConnection().availableUserNames(username);
-        if(validNames instanceof Error)
-            return res.json({ Error: "Name is already taken." });
+        if(validNames instanceof Error) { return res.json({ Error: "Name is already taken." }); }
 
         let userdata = {
             uuid: User.GenerateUUID(),
             name: username ?? null,
             age: Date.now(),
             connections: json ?? {},
-            roles: await this.server.getDatabaseConnection().getUserCodeValue(code)
+            roles: code ? await this.server.getDatabaseConnection().getUserCodeValue(code) : 0
         }
 
         // DB function to repeat create and check on conflict, return first available uuid for userdata above - TODO
@@ -149,7 +144,7 @@ export class Authenticator {
         let info = await TwitchAuth.GetInfoFromToken(tokens);
         let user = await this.server.getDatabaseConnection().getUserFromTwitchID(info?.id ?? "");
         return await this.handleUserAuth(req, res, next, user, { 
-            twitch: { id: info?.id, name: info?.display_name ?? info?.login, backup_names: [info?.login] },
+            twitch: { id: info?.id, name: info?.display_name ?? info?.login },
         });
     }
     // #endregion
@@ -170,7 +165,7 @@ export class Authenticator {
 
         let user = await this.server.getDatabaseConnection().getUserFromYoutubeID(info?.id ?? "");
         return await this.handleUserAuth(req, res, next, user, {
-            youtube: { id: info?.id, name: snip?.title, backup_names: [(snip?.customUrl as string).slice(1)] }
+            youtube: { id: info?.id, name: snip?.title }
         });
     }
     // #endregion

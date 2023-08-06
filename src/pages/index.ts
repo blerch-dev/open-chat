@@ -10,7 +10,7 @@ import {
     ChatComponent, 
     EmbedComponent 
 } from './components';
-import { Roles } from '../user'; // Might move all user needs to components
+import { Roles, User, UserData } from '../user'; // Might move all user needs to components
 import { Server } from '../server';
 import { PlatformHandler } from '../state';
 
@@ -110,12 +110,21 @@ export const ProfilePage = (req: any, res: any, data: any = {}) => {
     </div>
     `;
 
-    // Role Placeholder
-    /*
-        ${roles.map((ri) => {
+    let roles = (userdata: UserData) => {
+        return `${User.GetFullRoles(userdata.roles).map((ri) => {
             return `<p style="color: ${ri.color};">${ri.name}</p>`
-        }).join('<br>')}
-    */
+        }).join('<br>')}`;
+    }
+
+    let status = (userdata: UserData) => {
+
+        return ``;
+    }
+
+    let connections = (userdata: UserData) => {
+
+        return ``;
+    }
 
     // Connection Placeholder
     /*
@@ -149,18 +158,18 @@ export const ProfilePage = (req: any, res: any, data: any = {}) => {
                 </span>
                 <span class="profile-card-group">
                     <h4>Roles:</h4>
-                    <p>role placeholder</p>
+                    ${roles(req.session.user)}
                 </span>
                 <span>
                     <h4>Status:</h4>
-                    <p>status placeholder</p>
+                    ${status(req.session.user)}
                 </span>
             </span>
         <div>
         <div>
             <h2>Connections</h2>
             <span class="profile-card">
-                <p>connection placeholder</p>
+                ${connections(req.session.user)}
             </span>
         </div>
     </div>
