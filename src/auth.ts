@@ -35,7 +35,8 @@ export class Authenticator {
         user = user as User; req.session.user = user.toJSON();
         if(await this.waitForSession(req, res)) {
             if(req.cookies.ssi) { await this.setAutoHandle(req, res, user.getUUID()); }
-            return res.send(ValidAuthPage(req, res, this.server.getProps(), user.getName()));
+            //return res.send(ValidAuthPage(req, res, this.server.getProps(), user.getName()));
+            return res.redirect('/profile');
         }
 
         return res.send(ErrorPage(req, res, this.server.getProps(), {
@@ -94,10 +95,10 @@ export class Authenticator {
     private async syncAccount(req: any, res: any, redirect_uri: string) {
         if(!req.session?.user) { return res.redirect(redirect_uri); }
 
-        console.log("Syncing Account:", req.session?.user?.uuid);
+        //console.log("Syncing Account:", req.session?.user?.uuid);
         let user_id = req.session?.user?.uuid;
         let result = await this.server.getDatabaseConnection().getUser(user_id);
-        console.log("Sync Result:", result);
+        //console.log("Sync Result:", result);
         if(result instanceof Error) { return res.redirect(redirect_uri); }
         req.session.user = result.toJSON();
         return res.redirect(redirect_uri);
@@ -118,7 +119,7 @@ export class Authenticator {
         }
 
         let result = await this.server.getDatabaseConnection().setConnections(req.session?.user?.uuid, pass_obj);
-        console.log("Set Connections Result:", result);
+        //console.log("Set Connections Result:", result);
         if(result instanceof Error || result === false) {
             return res.send(ErrorPage(req, res, this.server.getProps(), {
                 Message: "Failed to Add User Connection.", 

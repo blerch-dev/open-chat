@@ -1,9 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
 
 export enum Status {
-    VALID = 1 << 0,
-    BANNED = 1 << 1,
-    MUTED = 1 << 2
+    BANNED = 1 << 0,
+    MUTED = 1 << 1,
+    INVALID = 1 << 2,
 }
 
 export interface RoleInterface {
@@ -90,42 +90,37 @@ export class User {
     static ValidateUserData(data: UserData) {
         if(!data) { return undefined; }
 
-        let corrected_time = data?.created_at ? data.created_at - Date.now() : undefined;
+        //console.log("Validating User Data:", data);
+        let corrected_time = data?.created_at ? data?.created_at - Date.now() : undefined;
         data.age = (new Date(data?.age ?? corrected_time ?? Date.now())).getTime();
-        data.records = data?.records?.filter((val) => new Date(val?.expires ?? Date.now()).getTime() <= Date.now()) ?? [];
-        data.status = [...data?.records]?.reduce((pv, cv) => pv | cv?.type ?? 0, 0) ?? 0;
+
+        let records = data?.records?.filter((val: any) => val != null);
+        data.records = records?.filter((val: any) => { 
+            let expired = (new Date(val.expires ?? Date.now())).getTime() < Date.now();
+            return !expired;
+        });
+
+        data.status = data?.records?.reduce((pv, cv) => pv | cv?.type ?? 0, 0) ?? 0;
         // subscriptions
         return data;
-
-        // From Data - Might be better
-        /*
-            data.age = (new Date(data.created_at)).getTime();
-
-            let records = data.records.filter((val: any) => val != null);
-            data.records = records.filter((val: any) => { 
-                let expired = (new Date(val.expires ?? Date.now())).getTime() < Date.now();
-                return !expired;
-            });
-
-            data.status = [...data.records].reduce((pv, cv) => pv | cv.type, 0);
-        */
     }
 
     static GetUserConnection(connection: UserConnection | UserConnectionDB) {
-        if((connection as UserConnectionDB)?.user_id) {
+        let cdb = (connection as UserConnectionDB);
+        if(cdb?.user_id) {
             return {
-                twitch: { 
-                    id: (connection as UserConnectionDB)?.twitch_id ?? undefined,
-                    name: (connection as UserConnectionDB)?.twitch_name ?? undefined
-                },
-                youtube: { 
-                    id: (connection as UserConnectionDB)?.youtube_id ?? undefined,
-                    name: (connection as UserConnectionDB)?.youtube_name ?? undefined
-                },
-                discord: { 
-                    id: (connection as UserConnectionDB)?.discord_id ?? undefined,
-                    name: (connection as UserConnectionDB)?.discord_name ?? undefined
-                }
+                twitch: cdb?.twitch_id ? { 
+                    id: cdb?.twitch_id ?? undefined,
+                    name: cdb?.twitch_name ?? undefined
+                } : undefined,
+                youtube: cdb?.youtube_id ? { 
+                    id: cdb?.youtube_id ?? undefined,
+                    name: cdb?.youtube_name ?? undefined
+                } : undefined,
+                discord: cdb?.discord_id ? { 
+                    id: cdb?.discord_id ?? undefined,
+                    name: cdb?.discord_name ?? undefined
+                } : undefined
             }
         } else {
             return connection as UserConnection;

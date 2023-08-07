@@ -140,14 +140,17 @@ export class DatabaseConnection {
         let query = `
             SELECT users.*,
             to_json(user_connections.*) as connections,
-            array_agg(to_json(user_status_effects.*)) as records
+            array_agg(to_json(user_status_effects.*)) as records,
+            array_agg(to_json(user_subscriptions.*)) as subscriptions
             FROM users
             LEFT JOIN user_connections ON users.uuid = user_connections.user_id
             LEFT JOIN user_status_effects ON users.uuid = user_status_effects.user_id
                 AND user_status_effects.valid = 'yes'
                 AND user_status_effects.expires > CURRENT_TIMESTAMP
+            LEFT JOIN user_subscriptions ON users.uuid = user_subscriptions.user_id
+                AND user_subscriptions.expires > CURRENT_TIMESTAMP
             ${str}
-            GROUP BY users.uuid, user_connections.*;
+            GROUP BY users.uuid, user_connections.*, user_status_effects.*, user_subscriptions.*;
         `;
 
         return this.queryDB(query, ...vals);
@@ -175,11 +178,11 @@ export class DatabaseConnection {
 
         let result: QueryResult | Error;
         if(data instanceof User) {
-            result = await this.fullUserSearch(`WHERE uuid = $1`, data.getUUID());
+            result = await this.fullUserSearch(`WHERE uuid::text like $1`, data.getUUID());
         } else if(typeof data === 'string') {
-            result = await this.fullUserSearch(`WHERE uuid = $1 OR name = $1`, data);
+            result = await this.fullUserSearch(`WHERE uuid::text like $1 OR LOWER(name) = $2`, data, data.toLowerCase());
         } else {
-            result = await this.fullUserSearch(`WHERE uuid = $1`, data.uuid); // UserData
+            result = await this.fullUserSearch(`WHERE uuid::text like $1`, data.uuid); // UserData
         }
 
         if(result instanceof Error) { return result; }
@@ -310,13 +313,15 @@ export class DatabaseConnection {
             + ' youtube_id = $4, youtube_name = $5,'
             + ' discord_id = $6, discord_name = $7';
 
-        console.log("Current User Connection Data:", current);
+        //console.log("Current User Connection Data:", current);
         let getValue = (value: any, name: string) => {
-            let finalValue = (overwrite ? value : current?.[name]) ?? (!overwrite ? value : current?.[name]) ?? "";
-            // console.log(`Get Value: '${value}',\t '${current?.[name]}',\t '${finalValue}'`);
+            let finalValue = (overwrite ? value : current?.[name]) || (!overwrite ? value : current?.[name]) || null;
+            console.log(`Get Value: '${value}',\t '${current?.[name]}',\t '${finalValue}'`);
             return finalValue;
         }
 
+        //console.log("New Connection Values:", data);
+        //console.log(`\nShould Overwrite: ${overwrite}`);
         let values = [
             uuid, 
             getValue((data as UserConnection)?.twitch?.id ?? (data as UserConnectionDB)?.twitch_id, 'twitch_id'),
@@ -327,6 +332,7 @@ export class DatabaseConnection {
             getValue((data as UserConnection)?.discord?.name ?? (data as UserConnectionDB)?.discord_name, 'discord_name')
         ];
 
+        //console.log("New Connection Values:", values);
         result = await this.queryDB(query, ...values);
         if(result instanceof Error)
             return result;
@@ -403,7 +409,7 @@ export class DatabaseConnection {
 
         let query = await this.fullUserSearch('WHERE user_connections.twitch_id = $1', id.toString());
         if(query instanceof Error) { return query; }
-        return this.validUser(this.parseQueryResult(query).data);
+        return this.validUser(this.parseQueryResult(query).data?.[0]);
     }
     // #endregion
 
@@ -413,7 +419,7 @@ export class DatabaseConnection {
 
         let query = await this.fullUserSearch('WHERE user_connections.youtube_id = $1', id.toString());
         if(query instanceof Error) { return query; }
-        return this.validUser(this.parseQueryResult(query).data);
+        return this.validUser(this.parseQueryResult(query).data?.[0]);
     }
     // #endregion
 

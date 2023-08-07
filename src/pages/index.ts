@@ -10,7 +10,7 @@ import {
     ChatComponent, 
     EmbedComponent 
 } from './components';
-import { Roles, User, UserData } from '../user'; // Might move all user needs to components
+import { Roles, User, UserConnection, UserData } from '../user'; // Might move all user needs to components
 import { Server } from '../server';
 import { PlatformHandler } from '../state';
 
@@ -111,7 +111,7 @@ export const ProfilePage = (req: any, res: any, data: any = {}) => {
     `;
 
     let roles = (userdata: UserData) => {
-        return `${User.GetFullRoles(userdata.roles).map((ri) => {
+        return `${User.GetFullRoles(userdata?.roles ?? 0).map((ri) => {
             return `<p style="color: ${ri.color};">${ri.name}</p>`
         }).join('<br>')}`;
     }
@@ -122,29 +122,24 @@ export const ProfilePage = (req: any, res: any, data: any = {}) => {
     }
 
     let connections = (userdata: UserData) => {
-
-        return ``;
-    }
-
-    // Connection Placeholder
-    /*
-        ${con?.twitch ? `
+        let connection = userdata?.connections as UserConnection;
+        return `${connection?.twitch ? `
             <span class="profile-card-tag twitch-tag">
                 <img src="/assets/logos/twitch.svg">
-                <h4>${con.twitch.username}</h4>
+                <h4>${connection?.twitch?.name}</h4>
             </span>
         ` : `
-            <a href="${auth_link('/twitch')}"><h4>Add Twitch Account</h4></a>
+            <a href="/auth/twitch"><h4>Add Twitch Account</h4></a>
         `}
-        ${con?.youtube ? `
+        ${connection?.youtube ? `
             <span class="profile-card-tag youtube-tag">
                 <img src="/assets/logos/youtube.svg">
-                <h4>${con.youtube.username}</h4>
+                <h4>${connection?.youtube?.name}</h4>
             </span>
         ` : `
-            <a href="${auth_link('/youtube')}"><h4>Add Youtube Account</h4></a>
-        `}
-    */
+            <a href="/auth/youtube"><h4>Add Youtube Account</h4></a>
+        `}`;
+    }
 
     let content = `
     <div class="content-section">
