@@ -91,7 +91,7 @@ export class User {
         if(!data) { return undefined; }
 
         //console.log("Validating User Data:", data);
-        let corrected_time = data?.created_at ? data?.created_at - Date.now() : undefined;
+        let corrected_time = data?.created_at ? Date.now() - data?.created_at : undefined;
         data.age = (new Date(data?.age ?? corrected_time ?? Date.now())).getTime();
 
         let records = data?.records?.filter((val: any) => val != null);
@@ -100,8 +100,8 @@ export class User {
             return !expired;
         });
 
+        data.subscriptions = data?.subscriptions?.filter((val: any) => val != null);
         data.status = data?.records?.reduce((pv, cv) => pv | cv?.type ?? 0, 0) ?? 0;
-        // subscriptions
         return data;
     }
 

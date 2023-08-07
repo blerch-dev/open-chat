@@ -45,7 +45,7 @@ const FormatDBString = (hardFormat = false) => {
     CREATE TABLE IF NOT EXISTS "user_tokens" (
         "user_id"               uuid NOT NULL,
         "selector"              varchar(12) NOT NULL,
-        "salt"                  varchar(64),
+        "salt"                  varchar(64) NOT NULL,
         "hashed_validator"      varchar(128) NOT NULL,
         "created_at"            timestamp without time zone NOT NULL DEFAULT NOW(),
         "expires"               timestamp without time zone NOT NULL,
@@ -148,7 +148,6 @@ export class DatabaseConnection {
                 AND user_status_effects.valid = 'yes'
                 AND user_status_effects.expires > CURRENT_TIMESTAMP
             LEFT JOIN user_subscriptions ON users.uuid = user_subscriptions.user_id
-                AND user_subscriptions.expires > CURRENT_TIMESTAMP
             ${str}
             GROUP BY users.uuid, user_connections.*, user_status_effects.*, user_subscriptions.*;
         `;
@@ -349,11 +348,29 @@ export class DatabaseConnection {
     // #endregion
 
     // #region Tokens
-    private async createTokenParts() {
+    private async createTokenParts(salt?: string) {
         let data = generateSelectorAndValidator();
-        let hash_output = await hashValue(data.validator, process.env.HASH_CODE);
+        let hash_output = await hashValue(data.validator, salt);
         if(hash_output instanceof Error) { console.log("Error Generating Hash:", hash_output); return hash_output; }
         return { selector: data.selector, validator: data.validator, hash: hash_output.hash, salt: hash_output.salt };
+    }
+
+    private async handleTokenDBWrite(user_id: string, expires: number, additional_query?: string) {
+        if(!(await this.waitForConnection())) { return this.ConnectionError; }
+
+        let token_parts = await this.createTokenParts();
+        if(token_parts instanceof Error) { return token_parts; }
+        
+        let timestamp = (expires * (24 * 60 * 60 * 1000) + Date.now()) / 1000;
+        let query = 'INSERT INTO user_tokens (selector, user_id, salt, hashed_validator, expires)'
+            + 'VALUES ($1, $2, $3, $4 to_timestamp($5))';
+
+        if(additional_query) { query += additional_query; }
+
+        let result = await this.queryDB(query, token_parts.selector, user_id, token_parts.salt, token_parts.hash, timestamp);
+        if(result instanceof Error) { return result; }
+
+        return `${token_parts.selector}-${token_parts.validator}`;
     }
 
     public async getTokenBySelector(selector: string) {
@@ -365,20 +382,6 @@ export class DatabaseConnection {
             return result;
 
         return this.parseQueryResult(result);
-    }
-
-    public async createUserToken(user_id: string, expires = 7 * 4) {
-        if(!(await this.waitForConnection())) { return this.ConnectionError; }
-
-        let token_parts = await this.createTokenParts();
-        if(token_parts instanceof Error) { return token_parts; }
-        
-        let timestamp = expires * (24 * 60 * 60 * 1000);
-        let query = 'INSERT INTO user_tokens (selector, user_id, hashed_validator, expires) VALUES ($1, $2, $3, to_timestamp($4))';
-        let result = await this.queryDB(query, token_parts.selector, user_id, token_parts.hash, timestamp);
-        if(result instanceof Error) { return result; }
-
-        return `${token_parts.selector}-${token_parts.validator}`;
     }
 
     public async validateTokenSession(token_str: string) {
@@ -398,8 +401,17 @@ export class DatabaseConnection {
         return new Error("Failed to Validate Session from Token.");
     }
 
-    public async refreshToken(selector: string, expires = 7 * 4) {
-        // called after validation above, will ignore if not close enough - todo
+    // Not Needed
+    public async createUserToken(user_id: string, expires = 7 * 4) {
+        return await this.handleTokenDBWrite(user_id, expires);
+    }
+
+    // Will Create as Well
+    public async refreshToken(user_id: string, expires = 7 * 4) {
+        let query = ' ON CONFLICT (user_id) DO UPDATE SET'
+            + 'selector = $1, salt = $3, hashed_validator = $4, expires = to_timestamp($5)';
+
+        return await this.handleTokenDBWrite(user_id, expires, query);
     }
     // #endregion
 
@@ -427,7 +439,8 @@ export class DatabaseConnection {
     public async getUserCodeValue(code: string) {
         if(!(await this.waitForConnection())) { return this.ConnectionError; }
 
-        let query_str = 'UPDATE user_codes SET uses = uses - 1 WHERE code = $1 AND uses > $2 AND expires > to_timestamp($3) RETURNING *'
+        let query_str = 'UPDATE user_codes SET uses = uses - 1'
+            + 'WHERE code = $1 AND uses > $2 AND expires > to_timestamp($3) RETURNING *'
         let query = await this.queryDB(query_str, code, 0, Date.now() / 1000);
         if(query instanceof Error || query.rowCount == 0) { return 0; }
 

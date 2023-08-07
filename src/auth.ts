@@ -22,10 +22,10 @@ export class Authenticator {
     }
 
     public async handleAutoSession(req: any, res: any) {
-        if(req.session.user || !req.cookies.ssi || !req.cookies.ssi_token) { return; }
-        //let selector
-        // todo - create session if possible (and not already present)
-            // return if session is created (ValidAuthPage Redirect)
+        if(req.session.user || !req.cookies.ssi || !req.cookies.ssi_token) { 
+            return Error("Auto Session is not required or not configured."); 
+        }
+        return await this.server.getDatabaseConnection().validateTokenSession(req.cookies.ssi_token);
     }
 
     public async handleUserAuth(req: any, res: any, next: any, user: any, userdata: any = {}) {
@@ -131,8 +131,27 @@ export class Authenticator {
     }
 
     private async setAutoHandle(req: any, res: any, user_id: any) {
-        // todo - if token is present, reset and reapply
+        const week_time = (1000 * 60 * 60 * 24 * 7);
+        const setCookie = (token: string) => {
+            res.cookie('ssi_token', token, { httpOnly: true, secure: this.server.isProd(), maxAge: week_time * 4 });
+        }
         
+        console.log("SSI Token:", req.cookies?.ssi, req.cookies?.ssi_token);
+        if(req.cookies?.ssi_token) {
+            let token_info = await this.server.getDatabaseConnection().getTokenBySelector(req.cookies.ssi_token.split('-')[0]);
+            if(token_info instanceof Error) { if(this.debug) { console.log(token_info); } return; }
+    
+            let renewal = (new Date(token_info.data[0].expires).getTime() - Date.now()) < week_time;
+            if(renewal && token_info.data[0].user_id == user_id) { 
+                let result = await this.server.getDatabaseConnection().refreshToken(user_id);
+                if(result instanceof Error) { if(this.debug) { console.log(result); } return; }
+                setCookie(result as string);
+            }
+        } else {
+            let token = await this.server.getDatabaseConnection().createUserToken(user_id);
+            if(token instanceof Error) { if(this.debug) { console.log(token); } return; }
+            setCookie(token);
+        }
     }
 
     // #region Twitch

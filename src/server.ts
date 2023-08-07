@@ -152,9 +152,14 @@ export class Server {
 
         // Auto Handles
         this.app.use('*', async (req, res, next) => {
-            req.session.user = User.ValidateUserData(req?.session?.user as UserData);
             // Check if Redis needs user to update from db
-            if(req.session?.user == undefined && req.cookies.ssi) { await this.auth.handleAutoSession(req, res); }
+            if(req.session?.user == undefined && req.cookies.ssi) { 
+                let user = await this.auth.handleAutoSession(req, res); 
+                if(user instanceof User) { req.session.user = user.toJSON(); }
+            } else if(req.session.user) {
+                req.session.user = User.ValidateUserData(req?.session?.user as UserData);
+            }
+
             return next();
         });
 
