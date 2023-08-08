@@ -128,9 +128,8 @@ export class DatabaseConnection {
     }
 
     private parseQueryResult(res: QueryResult): QueryOutput {
-        const data = res.rows?.[0] ?? res.rows;
-        // console.log("Parsing Query Result:", res.command, res.rowCount, res.rows, data);
-        return { data: data, meta: {
+        const data = res.rows?.[0] ?? {};
+        return { data: data, fullData: res?.rows, meta: {
             rowCount: res.rowCount
         }};
     }
@@ -245,7 +244,7 @@ export class DatabaseConnection {
         }
         
         if(result instanceof Error) { return result; }
-        return this.parseQueryResult(result).deleteCount > 0;
+        return this.parseQueryResult(result).meta.rowCount > 0;
     }
 
     // Quick Functions
@@ -361,19 +360,20 @@ export class DatabaseConnection {
         let token_parts = await this.createTokenParts();
         if(token_parts instanceof Error) { return token_parts; }
         
-        let timestamp = (expires * (24 * 60 * 60 * 1000) + Date.now()) / 1000;
+        let timestamp = Math.floor((expires * (24 * 60 * 60 * 1000) + Date.now()) / 1000);
         let query = 'INSERT INTO user_tokens (selector, user_id, salt, hashed_validator, expires)'
-            + 'VALUES ($1, $2, $3, $4 to_timestamp($5))';
+            + 'VALUES ($1, $2, $3, $4, to_timestamp($5))';
 
         if(additional_query) { query += additional_query; }
 
-        let result = await this.queryDB(query, token_parts.selector, user_id, token_parts.salt, token_parts.hash, timestamp);
+        let values = [token_parts.selector, user_id, token_parts.salt, token_parts.hash, timestamp];
+        let result = await this.queryDB(query, ...values);
         if(result instanceof Error) { return result; }
 
         return `${token_parts.selector}-${token_parts.validator}`;
     }
 
-    public async getTokenBySelector(selector: string) {
+    public async getTokenBySelector(selector: string): Promise<Error | QueryOutput> {
         if(!(await this.waitForConnection())) { return this.ConnectionError; }
 
         let query = 'SELECT * FROM user_tokens WHERE selector = $1';
@@ -381,7 +381,7 @@ export class DatabaseConnection {
         if(result instanceof Error)
             return result;
 
-        return this.parseQueryResult(result);
+        return this.parseQueryResult(result).data;
     }
 
     public async validateTokenSession(token_str: string) {
@@ -421,7 +421,7 @@ export class DatabaseConnection {
 
         let query = await this.fullUserSearch('WHERE user_connections.twitch_id = $1', id.toString());
         if(query instanceof Error) { return query; }
-        return this.validUser(this.parseQueryResult(query).data?.[0]);
+        return this.validUser(this.parseQueryResult(query).data);
     }
     // #endregion
 
@@ -431,7 +431,7 @@ export class DatabaseConnection {
 
         let query = await this.fullUserSearch('WHERE user_connections.youtube_id = $1', id.toString());
         if(query instanceof Error) { return query; }
-        return this.validUser(this.parseQueryResult(query).data?.[0]);
+        return this.validUser(this.parseQueryResult(query).data);
     }
     // #endregion
 

@@ -91,6 +91,11 @@ export class User {
         if(!data) { return undefined; }
 
         //console.log("Validating User Data:", data);
+        data.uuid = data?.uuid ?? "";
+        data.name = data?.name ?? "";
+        data.roles = data?.roles ?? 0;
+        data.valid = data?.valid ?? true;
+
         let corrected_time = data?.created_at ? Date.now() - data?.created_at : undefined;
         data.age = (new Date(data?.age ?? corrected_time ?? Date.now())).getTime();
 
@@ -100,8 +105,11 @@ export class User {
             return !expired;
         });
 
+        data.connections = User.GetUserConnection(data?.connections);
         data.subscriptions = data?.subscriptions?.filter((val: any) => val != null);
         data.status = data?.records?.reduce((pv, cv) => pv | cv?.type ?? 0, 0) ?? 0;
+
+        //console.log("Returning:", data);
         return data;
     }
 
@@ -136,16 +144,20 @@ export class User {
     private data: UserData;
 
     constructor(data?: UserData | any) {
-        this.data = {
-            uuid: data?.uuid ?? "",
-            name: data?.name ?? "",
-            roles: data?.roles ?? 0,
-            valid: data?.valid ?? true,
-            status: data?.status ?? 0,
-            age: data?.age ?? Date.now(),
-            connections: User.GetUserConnection(data?.connections),
-            records: data?.records ?? [],
-            subscriptions: data?.subscriptions ?? []
+        let valid_data = User.ValidateUserData(data);
+        if(valid_data !== undefined) { this.data = valid_data }
+        else {
+            this.data = {
+                uuid: data?.uuid ?? "",
+                name: data?.name ?? "",
+                roles: data?.roles ?? 0,
+                valid: data?.valid ?? true,
+                status: data?.status ?? 0,
+                age: data?.age ?? Date.now(),
+                connections: User.GetUserConnection(data?.connections),
+                records: data?.records ?? [],
+                subscriptions: data?.subscriptions ?? []
+            }
         }
     }
 

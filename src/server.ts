@@ -145,7 +145,7 @@ export class Server {
                 httpOnly: true,
                 maxAge: ttl
             },
-            rolling: true
+            rolling: false
         });
 
         this.app.use(sessionParser);
