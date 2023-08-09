@@ -164,6 +164,7 @@ export class Authenticator {
     public async verifyTwitch(req: any, res: any, next: any) {
         let tokens = await TwitchAuth.GetTokens(req, this.server.getProps()?.domain + '/verify/twitch');
         let info = await TwitchAuth.GetInfoFromToken(tokens);
+        let subs = await TwitchAuth.CheckSubscriptions(tokens);
         let user = await this.server.getDatabaseConnection().getUserFromTwitchID(info?.id ?? "");
         return await this.handleUserAuth(req, res, next, user, { 
             twitch: { id: info?.id, name: info?.display_name ?? info?.login },
@@ -219,8 +220,17 @@ class TwitchAuth {
         })).json())?.data?.[0];
     }
 
-    static CheckSubscriptions = async () => {
-
+    static CheckSubscriptions = async (tokens?: any) => {
+        // get tokens if undefined
+        if(!process.env.TWITCH_CHANNEL_ID) { return undefined; }
+        let args = `?broadcaster_id=${process.env.TWITCH_CHANNEL_ID}`
+        let result = (await (await fetch(`https://api.twitch.tv/helix/subscriptions${args}`, {
+            headers: {
+                'Authorization': `Bearer ${tokens?.access_token}`,
+                'Client-Id': `${process.env.TWITCH_ID}`
+            }
+        })).json())?.data?.[0];
+        // parse result, return relevant data
     }
 }
 
