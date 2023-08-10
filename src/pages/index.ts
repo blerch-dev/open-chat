@@ -66,6 +66,80 @@ export const AuthPage = (req: any, res: any, data: any = {}) => {
     `);
 }
 
+export const BetaPage = (req: any, res: any, data: any = {}) => {
+    return MinimumLayout(req, res, data, `${
+        `
+        <h3>Open Chat Beta</h3>
+        <div>
+            <label>Beta Code:</label>
+            <input id="beta-code" type="text">
+            <button id="beta-enter">
+                <p style="pointer-events: none;">Enter</p>
+            </button>
+            ${data?.current_code ? `<p class="bad-code">${data.current_code} is not a valid beta code.</p>` : ''}
+        </div>
+
+        <style>
+            .bad-code {
+                color: red;
+            }
+
+            body { 
+                padding: 20px; 
+            }
+
+            h3 {
+                margin-bottom: 10px;
+            }
+
+            div {
+                display: flex;
+                flex-direction: column;
+                width: 300px;
+                gap: 5px;
+            }
+
+            input, button {
+                color: white;
+                outline: none;
+                border: 2px #ffffff3f solid;
+                border-radius: 5px;
+                min-height: 30px;
+                font-size: 14px;
+                padding: 5px;
+            }
+
+            input {
+                background-color: #0000000f;
+            }
+
+            button {
+                background-color: #ffffff0f;
+            }
+        </style>
+
+        <script>
+            console.log("Script Load");
+            document.addEventListener('DOMContentLoaded', () => {
+                let input = document.getElementById('beta-code');
+                let button = document.getElementById('beta-enter');
+
+                const goToSite = () => {
+                    console.log("going to site: " + input.value);
+                    document.cookie = "beta=" + input.value + "; expires=Fri, 31 Dec 2023 23:59:59 GMT; path=/";
+                    window.location.reload();
+                };
+
+                button.addEventListener('click', () => { console.log("clicked"); goToSite(); });
+                input.addEventListener('keydown', (e) => {
+                    if(e.code === 'Enter' || e.code === 'NumpadEnter') { goToSite(); }
+                });
+            });
+        </script>
+        `
+    }`);
+}
+
 export const SignUpPage = (req: any, res: any, data: any = {}, userdata: any = {}) => {
     let page = `
     <main>

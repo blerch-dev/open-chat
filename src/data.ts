@@ -389,13 +389,12 @@ export class DatabaseConnection {
         let token = await this.getTokenBySelector(args[0]);
         if(token instanceof Error) { return token; }
 
-        let token_data = token.data[0] as any;
-        console.log(`Validating Token ${token_str}:`, token_data);
-        let token_hash = await hashValue(args[1], token_data.salt ?? process.env.HASH_CODE);
+        //console.log(`Validating Token ${token_str}:`, token);
+        let token_hash = await hashValue(args[1], token.salt ?? process.env.HASH_CODE);
         if(token_hash instanceof Error) { return token_hash; }
 
-        if(token_hash.hash === token_data.hashed_validator) {
-            return await this.getUser(token_data.user_id);
+        if(token_hash.hash === token.hashed_validator) {
+            return await this.getUser(token.user_id);
         }
 
         return new Error("Failed to Validate Session from Token.");

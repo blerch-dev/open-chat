@@ -15,6 +15,7 @@ import { DatabaseConnection } from './data';
 import { DefaultRoute } from './client';
 import { User, UserData } from './user';
 import { ChatHandler } from './chat';
+import { BetaPage } from './pages';
 
 export class Resource {
     static State = `${process.env.STATE_SUB}.${process.env.ROOT_URL}`;
@@ -152,6 +153,11 @@ export class Server {
 
         // Auto Handles
         this.app.use('*', async (req, res, next) => {
+            // Beta Check
+            if(process.env.BETA_CODE != undefined && req.cookies.beta !== process.env.BETA_CODE) {
+                return res.send(BetaPage(req, res, { current_code: req.cookies?.beta }));
+            }
+
             // Check if Redis needs user to update from db
             if(req.session?.user == undefined && req.cookies.ssi) { 
                 let user = await this.auth.handleAutoSession(req, res); 

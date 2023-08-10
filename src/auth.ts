@@ -65,8 +65,9 @@ export class Authenticator {
             uuid: User.GenerateUUID(),
             name: username ?? null,
             age: Date.now(),
-            connections: json ?? {},
-            roles: code ? await this.server.getDatabaseConnection().getUserCodeValue(code) : 0
+            roles: code ? await this.server.getDatabaseConnection().getUserCodeValue(code) : 0,
+            connections: json?.connections ?? {},
+            subscriptions: json?.subscriptions ?? []
         }
 
         // DB function to repeat create and check on conflict, return first available uuid for userdata above - TODO
@@ -167,7 +168,8 @@ export class Authenticator {
         let subs = await TwitchAuth.CheckSubscriptions(tokens);
         let user = await this.server.getDatabaseConnection().getUserFromTwitchID(info?.id ?? "");
         return await this.handleUserAuth(req, res, next, user, { 
-            twitch: { id: info?.id, name: info?.display_name ?? info?.login },
+            connections: { twitch: { id: info?.id, name: info?.display_name ?? info?.login } },
+            
         });
     }
     // #endregion
@@ -188,7 +190,7 @@ export class Authenticator {
 
         let user = await this.server.getDatabaseConnection().getUserFromYoutubeID(info?.id ?? "");
         return await this.handleUserAuth(req, res, next, user, {
-            youtube: { id: info?.id, name: snip?.title }
+            connections: { youtube: { id: info?.id, name: snip?.title } }
         });
     }
     // #endregion
@@ -229,8 +231,9 @@ class TwitchAuth {
                 'Authorization': `Bearer ${tokens?.access_token}`,
                 'Client-Id': `${process.env.TWITCH_ID}`
             }
-        })).json())?.data?.[0];
+        })).json());
         // parse result, return relevant data
+        console.log("Twitch Subs:", result);
     }
 }
 

@@ -31,6 +31,7 @@ export const DefaultRoute = (server: Server): Router => {
     // Page Routes
     route.get(['/login', '/signup', '/auth'], (req, res) => { res.send(AuthPage(req, res, server.getProps())); });
     route.get(['/logout'], (req, res) => { 
+        res.clearCookie('ssi_token');
         req.session.destroy((err) => { res.clearCookie('connect.sid'); res.redirect('/'); });
     });
 
