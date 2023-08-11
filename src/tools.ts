@@ -2,12 +2,14 @@
 import Crypto from 'crypto';
 
 export function sleep(ms: number) { return new Promise(res => setTimeout(res, ms)) }
+
 export function generateSelectorAndValidator() {
     return {
-        selector: Crypto.randomBytes(6).toString('hex'),
-        validator: Crypto.randomBytes(32).toString('hex')
+        selector: randomValue(12),
+        validator: randomValue(64),
     }
 }
+
 export function hashValue(
     value: string, 
     salt?: string, 
@@ -23,4 +25,8 @@ export function hashValue(
             res({ hash: derivedKey.toString('hex'), salt: input_salt });
         });
     });
+}
+
+export function randomValue(length: number) {
+    return Crypto.randomBytes(Math.floor(length/2) ?? 0).toString('hex');
 }

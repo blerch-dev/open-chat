@@ -6,6 +6,8 @@ import { User, UserData } from './user';
 
 // Redirects are completed before req.session is saved, needs to be fixed
 
+// need to use ngrok or alternative to test eventsub, once subscriptions are in place it can be public facing
+
 export class Authenticator {
 
     private server: Server;
@@ -165,7 +167,7 @@ export class Authenticator {
     public async verifyTwitch(req: any, res: any, next: any) {
         let tokens = await TwitchAuth.GetTokens(req, this.server.getProps()?.domain + '/verify/twitch');
         let info = await TwitchAuth.GetInfoFromToken(tokens);
-        let subs = await TwitchAuth.CheckSubscriptions(tokens);
+        let subs = await TwitchAuth.CheckSubscriptions(tokens, info?.id);
         let user = await this.server.getDatabaseConnection().getUserFromTwitchID(info?.id ?? "");
         return await this.handleUserAuth(req, res, next, user, { 
             connections: { twitch: { id: info?.id, name: info?.display_name ?? info?.login } },
@@ -222,18 +224,19 @@ class TwitchAuth {
         })).json())?.data?.[0];
     }
 
-    static CheckSubscriptions = async (tokens?: any) => {
+    static CheckSubscriptions = async (tokens?: any, user_platform_id?: string) => {
         // get tokens if undefined
         if(!process.env.TWITCH_CHANNEL_ID) { return undefined; }
-        let args = `?broadcaster_id=${process.env.TWITCH_CHANNEL_ID}`
-        let result = (await (await fetch(`https://api.twitch.tv/helix/subscriptions${args}`, {
+        let args = `?broadcaster_id=${process.env.TWITCH_CHANNEL_ID}&user_id=${user_platform_id}`
+        let result = (await (await fetch(`https://api.twitch.tv/helix/subscriptions/user${args}`, {
             headers: {
                 'Authorization': `Bearer ${tokens?.access_token}`,
                 'Client-Id': `${process.env.TWITCH_ID}`
             }
         })).json());
         // parse result, return relevant data
-        console.log("Twitch Subs:", result);
+        console.log("Twitch Subs:", result, tokens);
+        return result?.data?.[0]?.tier / 1000;
     }
 }
 

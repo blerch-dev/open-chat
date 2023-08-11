@@ -27,6 +27,9 @@
     "typescript": "^5.1.5"
   },
   "dependencies": {
+    "@twurple/api": "^7.0.1",
+    "@twurple/auth": "^7.0.1",
+    "@twurple/eventsub-http": "^7.0.1",
     "connect-redis": "^7.1.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",

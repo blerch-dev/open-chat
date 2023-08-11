@@ -2,7 +2,7 @@ import { Pool, QueryResult } from 'pg';
 
 import { Server } from './server';
 import { User, UserData, UserConnection, UserConnectionDB, RoleValue, Roles } from './user';
-import { sleep, generateSelectorAndValidator, hashValue } from './tools';
+import { sleep, generateSelectorAndValidator, hashValue, randomValue } from './tools';
 
 const FormatDBString = (hardFormat = false) => {
     if(hardFormat) { console.log("Forcing Table Drops!"); }
@@ -87,9 +87,10 @@ export class DatabaseConnection {
         let result = await db.queryDB(FormatDBString(hardFormat));
         if(result instanceof Error) { return result; }
 
-        let code = process.env.ADMIN_CODE || null, value = RoleValue.ADMIN ?? Roles.Admin.value;
-        if(hardFormat && code) { 
-            result = await db.queryDB(`INSERT INTO user_codes (code, roles) VALUES ($1, $2);`, code, value);
+        if(hardFormat) { // Creates Codes for Owner/Admin (1 User Only)
+            let str = `INSERT INTO user_codes (code, roles) VALUES ($1, $2);`;
+            await db.queryDB(str, randomValue(32), Roles?.Owner?.value ?? 0);
+            await db.queryDB(str, randomValue(32), Roles?.Admin?.value ?? 0);
         }
 
         return result;
