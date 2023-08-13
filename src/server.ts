@@ -77,7 +77,7 @@ export class Server {
         this.props.env = process.env;
         this.props.isProd = this.isProd();
         this.props.domain = `http${this.isProd() ? 's' : ''}://${this.isProd() ? 
-            `www.${process.env.ROOT_URL}` : `${process.env.DEV_URL}:${process.env.SERVER_PORT}`}`;
+            `${process.env.BASE_SUB ?? ""}${process.env.ROOT_URL}` : `${process.env.DEV_URL}:${process.env.SERVER_PORT}`}`;
 
         // Embeds
         const sortEmbeds = (...embeds: { platform: string, src: string, channel: string }[]) => {

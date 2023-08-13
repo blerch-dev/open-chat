@@ -60,14 +60,20 @@ export class Authenticator {
             return res.json({ Error: 'Issue with Parsing Information. Try again later.', Code: 0x0105 });
         }
 
+        // check if username is valid string (no commas, special characters, etc)
+
         let validNames = await this.server.getDatabaseConnection().availableUserNames(username);
-        if(validNames instanceof Error) { return res.json({ Error: "Name is already taken." }); }
+        if(validNames instanceof Error) { return res.json({ Error: "Issue creating user." }); }
+        else if(validNames.length < 1) { return res.json({ Error: "Name is already taken." }); }
+
+        //console.log("Pre Data Definition:", code, username, json, validNames);
+        let role_code = code ? await this.server.getDatabaseConnection().getUserCodeValue(code) : 0;
 
         let userdata = {
             uuid: User.GenerateUUID(),
             name: username ?? null,
             age: Date.now(),
-            roles: code ? await this.server.getDatabaseConnection().getUserCodeValue(code) : 0,
+            roles: role_code,
             connections: json?.connections ?? {},
             subscriptions: json?.subscriptions ?? []
         }
@@ -75,6 +81,7 @@ export class Authenticator {
         // DB function to repeat create and check on conflict, return first available uuid for userdata above - TODO
         let result = await this.server.getDatabaseConnection().availableUUIDs(userdata.uuid);
         // console.log("Check:", User.ValidUserData(userdata), !(result instanceof Error), userdata, result);
+        
         if(User.ValidUserData(userdata) && !(result instanceof Error) && result.length == 1) {
             let user = await this.server.getDatabaseConnection().createUser(new User(userdata));
             if(user instanceof Error) {
@@ -165,13 +172,17 @@ export class Authenticator {
     }
 
     public async verifyTwitch(req: any, res: any, next: any) {
+        if(req?.query?.error) { return ErrorPage(req, res, this.server.getProps(), {
+            Message: req.query.error, Code: 0x0107
+        }); }
+
         let tokens = await TwitchAuth.GetTokens(req, this.server.getProps()?.domain + '/verify/twitch');
         let info = await TwitchAuth.GetInfoFromToken(tokens);
         let subs = await TwitchAuth.CheckSubscriptions(tokens, info?.id);
         let user = await this.server.getDatabaseConnection().getUserFromTwitchID(info?.id ?? "");
         return await this.handleUserAuth(req, res, next, user, { 
             connections: { twitch: { id: info?.id, name: info?.display_name ?? info?.login } },
-            
+
         });
     }
     // #endregion
@@ -184,6 +195,8 @@ export class Authenticator {
     }
 
     public async verifyYoutube(req: any, res: any, next: any) {
+        // check for error
+
         let tokens = await YoutubeAuth.GetTokens(req);
         // if(this.debug) { console.log("Youtube Tokens:", tokens); }
         let info = await YoutubeAuth.GetInfoFromToken(tokens);
@@ -192,7 +205,8 @@ export class Authenticator {
 
         let user = await this.server.getDatabaseConnection().getUserFromYoutubeID(info?.id ?? "");
         return await this.handleUserAuth(req, res, next, user, {
-            connections: { youtube: { id: info?.id, name: snip?.title } }
+            connections: { youtube: { id: info?.id, name: snip?.title } },
+
         });
     }
     // #endregion
@@ -235,7 +249,7 @@ class TwitchAuth {
             }
         })).json());
         // parse result, return relevant data
-        console.log("Twitch Subs:", result, tokens);
+        // console.log("Twitch Subs:", result, tokens);
         return result?.data?.[0]?.tier / 1000;
     }
 }

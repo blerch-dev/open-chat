@@ -195,7 +195,7 @@ export class DatabaseConnection {
         if(!User.ValidUserData(info))
             return Error("Invalud user data was given. Can't create user.");
 
-        //console.log("Create User Data:", info);
+        // console.log("Create User Data:", info);
 
         let query = 'SELECT * FROM users WHERE uuid = $1 OR LOWER(name) = $2';
         let result = await this.queryDB(query, info.uuid, info.name.toLowerCase());
@@ -211,6 +211,9 @@ export class DatabaseConnection {
         } else if(added !== true) {
             return Error("Issue adding connection to DB.");
         }
+
+        // Subscriptions
+        // -- todo
 
         query = 'INSERT INTO users (uuid, name, created_at, last_login, roles)'
             + ' VALUES ($1, $2, to_timestamp($3), to_timestamp($4), $5)';
@@ -315,7 +318,7 @@ export class DatabaseConnection {
         //console.log("Current User Connection Data:", current);
         let getValue = (value: any, name: string) => {
             let finalValue = (overwrite ? value : current?.[name]) || (!overwrite ? value : current?.[name]) || null;
-            console.log(`Get Value: '${value}',\t '${current?.[name]}',\t '${finalValue}'`);
+            // console.log(`Get Value: '${value}',\t '${current?.[name]}',\t '${finalValue}'`);
             return finalValue;
         }
 
@@ -440,8 +443,8 @@ export class DatabaseConnection {
         if(!(await this.waitForConnection())) { return this.ConnectionError; }
 
         let query_str = 'UPDATE user_codes SET uses = uses - 1'
-            + 'WHERE code = $1 AND uses > $2 AND expires > to_timestamp($3) RETURNING *'
-        let query = await this.queryDB(query_str, code, 0, Date.now() / 1000);
+            + ' WHERE code = $1 AND uses > $2 AND expires > to_timestamp($3) RETURNING *'
+        let query = await this.queryDB(query_str, code, 0, Math.floor(Date.now() / 1000));
         if(query instanceof Error || query.rowCount == 0) { return 0; }
 
         //console.log("Query Result:", query);

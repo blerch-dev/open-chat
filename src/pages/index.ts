@@ -158,7 +158,7 @@ export const SignUpPage = (req: any, res: any, data: any = {}, userdata: any = {
                 value="${userdata?.twitch?.name ?? userdata?.youtube?.name ?? userdata?.discord?.name ?? ''}">
             </span>
             <span class="auth-input">
-                <label for="code">Code:</label>
+                <label for="code">Sign Up Code:</label>
                 <input type="text" name="code" id="code" placeholder="Optional">
             </span>
             <input type="hidden" name="data" value="${JSON.stringify(userdata).replace(/"/g, '\'')}">
