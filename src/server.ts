@@ -213,9 +213,10 @@ export class Server {
 }
 
 // Current Routes
-const IngressPaths = ['/status*']
+const IngressPaths = ['/status*', '/eventsub*']
 const IngressRoute = (server: Server): Router => {
     const route = Router();
+    const manager = () => server.getPlatformManager();
 
     route.post('/status/obs/live', (req, res, next) => {
         // user should be admin/owner
@@ -231,11 +232,14 @@ const IngressRoute = (server: Server): Router => {
         } catch(err) {}
 
         if(json?.code == process.env.INGRESS_CODE) {
-            server.getPlatformManager().setCheckMode(json?.isLive ?? undefined);
+            manager().setCheckMode(json?.isLive ?? undefined);
         }
 
         next();
     });
+
+    route.use(express.raw({ type: 'application/json' }));
+    //route.all('/eventsub/twitch*', (manager().getPlatformConnections('twitch') as TwitchHandler)?.eventSubMiddleware);
 
     return route;
 }

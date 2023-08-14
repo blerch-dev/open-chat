@@ -30,3 +30,11 @@ export function hashValue(
 export function randomValue(length: number) {
     return Crypto.randomBytes(Math.floor(length/2) ?? 0).toString('hex');
 }
+
+export function createHmac(secret: string, message: string) {
+    return Crypto.createHmac('sha256', secret).update(message).digest('hex');
+}
+
+export function verifyHmac(hmac: string, verifySignature: string) {
+    return Crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(verifySignature));
+}

@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events'
 
 import Redis from 'ioredis';
+import { createHmac, randomValue, verifyHmac } from './tools';
 
 export class RedisClient {
 
@@ -97,8 +98,39 @@ export class PlatformHandler {
 }
 
 export class TwitchHandler extends PlatformHandler {
+
+    private AppToken: string = "";
+
+    private HMAC_PREFIX = 'sha256='
+    private HMAC: string = "";
+
+    private TWITCH_MESSAGE_ID = 'Twitch-Eventsub-Message-Id'.toLowerCase();
+    private TWITCH_MESSAGE_TIMESTAMP = 'Twitch-Eventsub-Message-Timestamp'.toLowerCase();
+    private TWITCH_MESSAGE_SIGNATURE = 'Twitch-Eventsub-Message-Signature'.toLowerCase();
+    private TWITCH_MESSAGE_TYPE = 'Twitch-Eventsub-Message-Type'.toLowerCase();
+
+    // needs callback
+    private default_events = [
+        {
+            type: "stream.online",
+            version: "1",
+            condition: { broadcaster_user_id: process.env.TWITCH_CHANNEL_ID },
+            transport: { method: 'webhook', callback: null, secret: this.HMAC }
+        },
+        {
+            type: "stream.offline",
+            version: "1",
+            condition: { broadcaster_user_id: process.env.TWITCH_CHANNEL_ID },
+            transport: { method: 'webhook', callback: null, secret: this.HMAC }
+        }
+    ]
+    
     constructor() {
         super('Twitch');
+
+        this.HMAC = randomValue(64);
+
+
     }
 
     public async forceScrapLiveCheck() {
@@ -111,6 +143,62 @@ export class TwitchHandler extends PlatformHandler {
         return `https://player.twitch.tv/?channel=${process.env.TWITCH_CHANNEL}&parent=${
             process.env.NODE_ENV === 'prod' ? process.env.ROOT_URL : process.env.DEV_URL
         }`;
+    }
+
+    public async checkSubscribedEvents(app_token: string) {
+        let response = await fetch('https://api.twitch.tv/helix/eventsub/subscriptions', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${app_token}`,
+                'Client-Id': `${process.env.TWITCH_ID}`, 
+            }
+        });
+
+        let result = await response.json();
+        // result.data will be array of objects with types and ids for checking subscribed events
+        console.log("Subbed Events:", result.data);
+        return response.status < 300 && response.status >= 200;
+    }
+
+    public async subscribeToEvents(app_token: string, options?: any) {
+        let response = await fetch('https://api.twitch.tv/helix/eventsub/subscriptions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${app_token}`,
+                'Client-Id': `${process.env.TWITCH_ID}`,
+                'Content-Type': `application/json`,
+            },
+            body: JSON.stringify(options ?? {
+                type: "stream.online",
+                version: "1",
+                condition: { broadcaster_user_id: process.env.TWITCH_CHANNEL_ID },
+                transport: { method: 'webhook', callback: '', secret: this.HMAC }
+            })
+        });
+
+        // let result = await response.json(); // echo on success, shows pending status
+        return response.status < 300 && response.status >= 200; // Success on 200 Status
+    }
+
+    public eventSubMiddleware(req: any, res: any) {
+        const hmac_message = req.headers[this.TWITCH_MESSAGE_ID] + req.headers[this.TWITCH_MESSAGE_TIMESTAMP] + req.body;
+        const hmac = createHmac(this.HMAC, hmac_message);
+        if(true === verifyHmac(hmac, req.headers[this.TWITCH_MESSAGE_SIGNATURE])) {
+            const notification = JSON.parse(req.body), type = req.headers[this.TWITCH_MESSAGE_TYPE];
+            // handle notification
+            console.log(`Notification (${type}): `, notification);
+
+            if(type === 'webhook_callback_verification') {
+                console.log("Webhook Challenge:", notification.challenge);
+                res.status(200).send(notification.challenge);
+            } else {
+                // pass to event handler
+                res.sendStatus(200);
+            }
+        } else {
+            console.log("Failed! - ", hmac_message, hmac, req.headers[this.TWITCH_MESSAGE_SIGNATURE]);
+            res.sendStatus(403);
+        }
     }
 }
 

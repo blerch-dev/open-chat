@@ -184,6 +184,15 @@ export const ProfilePage = (req: any, res: any, data: any = {}) => {
     </div>
     `;
 
+    let owner = `
+    <div id="Owner" class="profile-section">
+        <h2>Owner</h2>
+        <span>
+            
+        </span>
+    </div>
+    `;
+
     let roles = (userdata: UserData) => {
         return `${User.GetFullRoles(userdata?.roles ?? 0).map((ri) => {
             return `<p style="color: ${ri.color};">${ri.name}</p>`
