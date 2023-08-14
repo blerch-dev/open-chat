@@ -155,6 +155,8 @@ export class Server {
         this.app.use('*', async (req, res, next) => {
             // Beta Check
             if(process.env.BETA_CODE != undefined && req.cookies.beta !== process.env.BETA_CODE) {
+                if(req.originalUrl === '/eventsub/twitch') { return next(); }
+
                 return res.send(BetaPage(req, res, { current_code: req.cookies?.beta }));
             }
 
@@ -170,7 +172,7 @@ export class Server {
         });
 
         // Ingress
-        this.app.use(IngressPaths, IngressRoute(this))
+        this.app.use(IngressRoute(this));
 
         // Default Route
         this.app.use(DefaultRoute(this));
@@ -183,6 +185,7 @@ export class Server {
         let port = props?.port ?? process.env.SERVER_PORT ?? 8000;
         this.server = this.app.listen(port, () => {
             console.log(`Listening on Port: ${port}`);
+            this.platformManager.setupEventSub();
         });
 
         // Retrieve Session
@@ -213,7 +216,6 @@ export class Server {
 }
 
 // Current Routes
-const IngressPaths = ['/status*', '/eventsub*']
 const IngressRoute = (server: Server): Router => {
     const route = Router();
     const manager = () => server.getPlatformManager();
@@ -239,13 +241,19 @@ const IngressRoute = (server: Server): Router => {
     });
 
     route.use(express.raw({ type: 'application/json' }));
-    route.all('/eventsub/twitch*', async (req: any, res: any) => {
+    route.post('/eventsub/twitch', async (req: any, res: any) => {
+        console.log("Hit from Twitch Eventsub...");
         let middle = () => (manager().getPlatformConnections('twitch') as TwitchHandler)?.eventSubMiddleware;
 
         let tries = 0;
         while(middle() == undefined && tries < 20) { await sleep(100); tries += 1; }
 
-        if(middle != undefined) { middle()(req, res); }
+        if(middle != undefined) { 
+            console.log("passing to middle...");
+            middle()(req, res); 
+        } else { 
+            console.log("Eventsub Middleware is not ready..."); 
+        }
     });
 
     return route;
@@ -274,8 +282,14 @@ class PlatformManager {
         this.startCheckInterval();
     }
 
+    public async setupEventSub() {
+        setTimeout(() => {
+            (this.getPlatformConnections('twitch') as TwitchHandler)?.establishEvents();
+        }, 100);
+    }
+
     public addHandler(handler: PlatformHandler) {
-        this.platformConnections[handler.getPlatform()] = handler;
+        this.platformConnections[handler.getPlatform().toLowerCase()] = handler;
     }
 
     public addHandlers(...handlers: PlatformHandler[]) {

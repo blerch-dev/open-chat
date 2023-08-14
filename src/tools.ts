@@ -36,5 +36,6 @@ export function createHmac(secret: string, message: string) {
 }
 
 export function verifyHmac(hmac: string, verifySignature: string) {
+    // console.log("Verifying:", hmac, verifySignature);
     return Crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(verifySignature));
 }

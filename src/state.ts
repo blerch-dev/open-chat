@@ -135,14 +135,13 @@ export class TwitchHandler extends PlatformHandler {
         super('Twitch');
 
         this.EventSubCallback = callback;
-        this.establishEvents(callback);
     }
 
     public async forceScrapLiveCheck() {
         this.LatestScrapAddress = `https://www.twitch.tv/${process.env.TWITCH_CHANNEL}`;
         this.LatestScrapText = await(await fetch(this.LatestScrapAddress)).text() ?? "err";
         return this.LatestScrapText.indexOf('isLiveBroadcast') >= 0;
-    };
+    }
 
     public getEmbedSource() {
         return `https://player.twitch.tv/?channel=${process.env.TWITCH_CHANNEL}&parent=${
@@ -150,6 +149,7 @@ export class TwitchHandler extends PlatformHandler {
         }`;
     }
 
+    // EventSub
     public async checkSubscribedEvents(app_token: string) {
         let response = await fetch('https://api.twitch.tv/helix/eventsub/subscriptions', {
             method: 'GET',
@@ -163,6 +163,23 @@ export class TwitchHandler extends PlatformHandler {
         // result.data will be array of objects with types and ids for checking subscribed events
         console.log("Subbed Events:", result.data);
         return result;
+    }
+
+    public async clearBadEvents(app_token: string, events: any[]) {
+        for(let i = 0; i < events.length; i++) {
+            if(events[i].status === 'enabled' || events[i].status === 'webhook_callback_verification_pending')
+                continue;
+
+            let response  = await fetch(`https://api.twitch.tv/helix/eventsub/subscriptions?id=${events[i].id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${app_token}`,
+                    'Client-Id': `${process.env.TWITCH_ID}`,
+                }
+            });
+
+            console.log(events[i].type, response.status);
+        }
     }
 
     public async subscribeToEvents(app_token: string, options: any) {
@@ -181,11 +198,11 @@ export class TwitchHandler extends PlatformHandler {
         return response.status < 300 && response.status >= 200; // Success on 200 Status
     }
 
-    public eventSubMiddleware(req: any, res: any) {
-        const hmac_message = req.headers[this.TWITCH_MESSAGE_ID] + req.headers[this.TWITCH_MESSAGE_TIMESTAMP] + req.body;
-        const hmac = createHmac(this.HMAC, hmac_message);
+    public eventSubMiddleware = async (req: any, res: any) => {
+        const hmac_message = this.getHmacMessage(req);
+        const hmac = this.HMAC_PREFIX + createHmac(this.HMAC, hmac_message);
         if(true === verifyHmac(hmac, req.headers[this.TWITCH_MESSAGE_SIGNATURE])) {
-            const notification = JSON.parse(req.body), type = req.headers[this.TWITCH_MESSAGE_TYPE];
+            const notification = req.body, type = req.headers[this.TWITCH_MESSAGE_TYPE];
             // handle notification
             console.log(`Notification (${type}): `, notification);
 
@@ -202,9 +219,11 @@ export class TwitchHandler extends PlatformHandler {
         }
     }
 
-    public async establishEvents(callback: string) {
+    public async establishEvents(callback?: string) {
+        if(callback == undefined) { callback = this.EventSubCallback; }
         await this.getAppToken();
         if(this.AppToken.AccessToken) {
+            console.log("Establishing Subs at Callback:", callback);
             let wanted_events = JSON.parse(JSON.stringify(this.default_events));
             let events = await this.checkSubscribedEvents(this.AppToken.AccessToken as string);
             for(let i = 0; i < events?.data?.length; i++) {
@@ -214,8 +233,13 @@ export class TwitchHandler extends PlatformHandler {
                 }
             }
 
+            wanted_events = Object.fromEntries(Object.entries(wanted_events).filter(([_, v]) => v != null));
+            await this.clearBadEvents(this.AppToken.AccessToken, events.data);
+
             let keys = Object.keys(wanted_events);
             for(let i = 0; i < keys.length; i++) {
+                if(wanted_events[keys[i]] === null) { continue; } // redundency
+
                 wanted_events[keys[i]].transport.callback = callback;
                 if(await this.subscribeToEvents(this.AppToken.AccessToken, wanted_events[keys[i]])) {
                     console.log("Subbed to Event:", wanted_events[keys[i]].type);
@@ -230,6 +254,11 @@ export class TwitchHandler extends PlatformHandler {
         }
     }
 
+    private getHmacMessage(req: any) {
+        return req.headers[this.TWITCH_MESSAGE_ID] + req.headers[this.TWITCH_MESSAGE_TIMESTAMP] + JSON.stringify(req.body);
+    }
+
+    // Tokens
     private async getAppToken() {
         let exp = this.AppToken?.Expiration?.ts ?? 0;
         exp += this.AppToken?.Expiration?.in ?? 0;

@@ -40,6 +40,7 @@ export const DefaultRoute = (server: Server): Router => {
     route.get(['/chat', '/chat/embed'], (req, res, next) => { res.end(); });
 
     route.get('/', (req, res) => { res.send(HomePage(req, res, server.getProps())); });
+    route.all('*', (req, res) => { console.log("Hit End of Routes!"); res.end(); });
 
     return route;
 }
