@@ -107,7 +107,7 @@ export class Server {
 
         // Platforms
         this.platformManager = new PlatformManager(
-            new TwitchHandler(),
+            new TwitchHandler(this.props.domain + '/eventsub/twitch'),
             new YoutubeHandler(),
             new KickHandler()
         );
@@ -239,7 +239,14 @@ const IngressRoute = (server: Server): Router => {
     });
 
     route.use(express.raw({ type: 'application/json' }));
-    //route.all('/eventsub/twitch*', (manager().getPlatformConnections('twitch') as TwitchHandler)?.eventSubMiddleware);
+    route.all('/eventsub/twitch*', async (req: any, res: any) => {
+        let middle = () => (manager().getPlatformConnections('twitch') as TwitchHandler)?.eventSubMiddleware;
+
+        let tries = 0;
+        while(middle() == undefined && tries < 20) { await sleep(100); tries += 1; }
+
+        if(middle != undefined) { middle()(req, res); }
+    });
 
     return route;
 }

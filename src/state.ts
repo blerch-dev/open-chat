@@ -99,10 +99,16 @@ export class PlatformHandler {
 
 export class TwitchHandler extends PlatformHandler {
 
-    private AppToken: string = "";
+    private AppToken: {
+        AccessToken?: string,
+        Expiration?: {ts: number, in: number},
+        Type?: string
+    } = {};
+
+    private EventSubCallback: string;
 
     private HMAC_PREFIX = 'sha256='
-    private HMAC: string = "";
+    private HMAC: string = randomValue(64);
 
     private TWITCH_MESSAGE_ID = 'Twitch-Eventsub-Message-Id'.toLowerCase();
     private TWITCH_MESSAGE_TIMESTAMP = 'Twitch-Eventsub-Message-Timestamp'.toLowerCase();
@@ -110,27 +116,26 @@ export class TwitchHandler extends PlatformHandler {
     private TWITCH_MESSAGE_TYPE = 'Twitch-Eventsub-Message-Type'.toLowerCase();
 
     // needs callback
-    private default_events = [
-        {
+    private default_events = {
+        "stream.online": {
             type: "stream.online",
             version: "1",
             condition: { broadcaster_user_id: process.env.TWITCH_CHANNEL_ID },
             transport: { method: 'webhook', callback: null, secret: this.HMAC }
         },
-        {
+        "stream.offline": {
             type: "stream.offline",
             version: "1",
             condition: { broadcaster_user_id: process.env.TWITCH_CHANNEL_ID },
             transport: { method: 'webhook', callback: null, secret: this.HMAC }
         }
-    ]
-    
-    constructor() {
+    }
+
+    constructor(callback: string) {
         super('Twitch');
 
-        this.HMAC = randomValue(64);
-
-
+        this.EventSubCallback = callback;
+        this.establishEvents(callback);
     }
 
     public async forceScrapLiveCheck() {
@@ -157,10 +162,10 @@ export class TwitchHandler extends PlatformHandler {
         let result = await response.json();
         // result.data will be array of objects with types and ids for checking subscribed events
         console.log("Subbed Events:", result.data);
-        return response.status < 300 && response.status >= 200;
+        return result;
     }
 
-    public async subscribeToEvents(app_token: string, options?: any) {
+    public async subscribeToEvents(app_token: string, options: any) {
         let response = await fetch('https://api.twitch.tv/helix/eventsub/subscriptions', {
             method: 'POST',
             headers: {
@@ -168,15 +173,11 @@ export class TwitchHandler extends PlatformHandler {
                 'Client-Id': `${process.env.TWITCH_ID}`,
                 'Content-Type': `application/json`,
             },
-            body: JSON.stringify(options ?? {
-                type: "stream.online",
-                version: "1",
-                condition: { broadcaster_user_id: process.env.TWITCH_CHANNEL_ID },
-                transport: { method: 'webhook', callback: '', secret: this.HMAC }
-            })
+            body: JSON.stringify(options)
         });
 
-        // let result = await response.json(); // echo on success, shows pending status
+        let result = await response.json(); // echo on success, shows pending status
+        console.log("Result of Sub Attempt:", result);
         return response.status < 300 && response.status >= 200; // Success on 200 Status
     }
 
@@ -199,6 +200,53 @@ export class TwitchHandler extends PlatformHandler {
             console.log("Failed! - ", hmac_message, hmac, req.headers[this.TWITCH_MESSAGE_SIGNATURE]);
             res.sendStatus(403);
         }
+    }
+
+    public async establishEvents(callback: string) {
+        await this.getAppToken();
+        if(this.AppToken.AccessToken) {
+            let wanted_events = JSON.parse(JSON.stringify(this.default_events));
+            let events = await this.checkSubscribedEvents(this.AppToken.AccessToken as string);
+            for(let i = 0; i < events?.data?.length; i++) {
+                if(events.data[i].status === 'enabled' || events.data[i].status === 'webhook_callback_verification_pending') {
+                    wanted_events[events.data[i].type] = null;
+                    console.log("Event Already Exists:", events.data[i].type);
+                }
+            }
+
+            let keys = Object.keys(wanted_events);
+            for(let i = 0; i < keys.length; i++) {
+                wanted_events[keys[i]].transport.callback = callback;
+                if(await this.subscribeToEvents(this.AppToken.AccessToken, wanted_events[keys[i]])) {
+                    console.log("Subbed to Event:", wanted_events[keys[i]].type);
+                } else {
+                    console.log("Failed to subscribe to Event:", wanted_events[keys[i]].type);
+                }
+            }
+            return true;
+        } else {
+            console.log("No Valid App Token.");
+            return false;
+        }
+    }
+
+    private async getAppToken() {
+        let exp = this.AppToken?.Expiration?.ts ?? 0;
+        exp += this.AppToken?.Expiration?.in ?? 0;
+        if(this.AppToken.AccessToken && exp > Date.now()) {
+            return; // seemingly valid app token already
+        }
+
+        let url = `https://id.twitch.tv/oauth2/token`;
+        let body = `client_id=${process.env.TWITCH_ID}&client_secret=${process.env.TWITCH_SECRET}&grant_type=client_credentials`;
+        let result = await (await fetch(url, {
+            method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body
+        })).json();
+
+        // console.log("Twitch App Results:", result);
+        this.AppToken.AccessToken = result.access_token;
+        this.AppToken.Expiration = { ts: Date.now(), in: result.expires_in };
+        this.AppToken.Type = result.token_type;
     }
 }
 
