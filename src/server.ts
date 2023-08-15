@@ -242,17 +242,15 @@ const IngressRoute = (server: Server): Router => {
 
     route.use(express.raw({ type: 'application/json' }));
     route.post('/eventsub/twitch', async (req: any, res: any) => {
-        console.log("Hit from Twitch Eventsub...");
         let middle = () => (manager().getPlatformConnections('twitch') as TwitchHandler)?.eventSubMiddleware;
 
         let tries = 0;
         while(middle() == undefined && tries < 20) { await sleep(100); tries += 1; }
 
         if(middle != undefined) { 
-            console.log("passing to middle...");
             middle()(req, res); 
         } else { 
-            console.log("Eventsub Middleware is not ready..."); 
+            console.log("Eventsub Middleware is not ready...");
         }
     });
 

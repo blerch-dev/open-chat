@@ -203,15 +203,14 @@ export class TwitchHandler extends PlatformHandler {
         const hmac = this.HMAC_PREFIX + createHmac(this.HMAC, hmac_message);
         if(true === verifyHmac(hmac, req.headers[this.TWITCH_MESSAGE_SIGNATURE])) {
             const notification = req.body, type = req.headers[this.TWITCH_MESSAGE_TYPE];
-            // handle notification
-            console.log(`Notification (${type}): `, notification);
+            // console.log(`Notification (${type}): `, notification);
 
             if(type === 'webhook_callback_verification') {
-                console.log("Webhook Challenge:", notification.challenge);
+                // console.log("Webhook Challenge:", notification.challenge);
                 res.status(200).send(notification.challenge);
             } else {
-                // pass to event handler
                 res.sendStatus(200);
+                this.handleEventSub(type, notification);
             }
         } else {
             console.log("Failed! - ", hmac_message, hmac, req.headers[this.TWITCH_MESSAGE_SIGNATURE]);
@@ -251,6 +250,23 @@ export class TwitchHandler extends PlatformHandler {
         } else {
             console.log("No Valid App Token.");
             return false;
+        }
+    }
+
+    private handleEventSub(type: string, notification: any) {
+        switch(type) {
+            case 'notification':
+                switch(notification?.subscription?.type) {
+                    case 'stream.online':
+                        this.checkForLiveChange(true); break;
+                    case 'stream.offline':
+                        this.checkForLiveChange(false); break;
+                    default: 
+                        break;
+                }
+                break;
+            default:
+                console.log("Non Handled Event:", type, notification);
         }
     }
 
