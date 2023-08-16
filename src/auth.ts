@@ -142,11 +142,10 @@ export class Authenticator {
     }
 
     private async setAutoHandle(req: any, res: any, user_id: any) {
-        console.log("Setting Auth Handle", req?.cooies?.ssi_token, );
-
+        // console.log("Setting Auth Handle", req?.cooies?.ssi_token, );
         const week_time = (1000 * 60 * 60 * 24 * 7);
         const setCookie = (token: string) => {
-            console.log("Configured Auto Handle Cookie!");
+            // console.log("Configured Auto Handle Cookie!");
             res.cookie('ssi_token', token, { path: '/', httpOnly: true, secure: this.server.isProd(), maxAge: week_time * 4 });
         }
         

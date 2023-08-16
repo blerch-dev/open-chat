@@ -41,7 +41,8 @@ export interface Embed {
     platform: string, 
     src: string,
     live: boolean,
-    channel: string
+    channel: string,
+    [key: string]: any
 }
 
 export class PlatformHandler {
@@ -62,7 +63,7 @@ export class PlatformHandler {
 
     public getPlatform() { return this.Platform; }
 
-    public checkForLiveChange(live_state: boolean) {
+    public checkForLiveChange(live_state: boolean, additional_data: {[key: string]: any} = {}) {
         if(this.isLive !== live_state) {
             this.isLive = live_state;
             ServerEvent.emit('live-state-change', {
@@ -70,7 +71,8 @@ export class PlatformHandler {
                 platform: this.Platform, 
                 src: this.getEmbedSource(),
                 live: this.isLive,
-                channel: this.Channel
+                channel: this.Channel,
+                ...additional_data
             });
 
             return true;
@@ -143,6 +145,22 @@ export class TwitchHandler extends PlatformHandler {
         return this.LatestScrapText.indexOf('isLiveBroadcast') >= 0;
     }
 
+    public async forceAPILiveCheck(broadcaster_id?: string, broadcaster_name?: string) {
+        if(!broadcaster_id && !broadcaster_name) { broadcaster_id = process.env.TWITCH_CHANNEL_ID; }
+        await this.getAppToken();
+
+        let url = `https://api.twitch.tv/helix/streams?first=1`;
+        url += `&type=live${broadcaster_id ? `&user_id=${broadcaster_id}` : ''}`;
+        url += `${broadcaster_name ? `&user_login=${broadcaster_name}` : ''}`;
+
+        let result = await(await fetch(url, { 
+            headers: { Authorization: `Bearer ${this.AppToken.AccessToken}`, 'Client-Id': `${process.env.TWITCH_ID}` }
+        })).json();
+
+        console.log(`Twitch Live Check for ${broadcaster_name ?? 'ID:' + broadcaster_id}:`, result);
+        return result?.data?.length > 0;
+    }
+
     public getEmbedSource() {
         return `https://player.twitch.tv/?channel=${process.env.TWITCH_CHANNEL}&parent=${
             process.env.NODE_ENV === 'prod' ? process.env.ROOT_URL : process.env.DEV_URL
@@ -161,7 +179,7 @@ export class TwitchHandler extends PlatformHandler {
 
         let result = await response.json();
         // result.data will be array of objects with types and ids for checking subscribed events
-        console.log("Subbed Events:", result.data);
+        // console.log("Subbed Events:", result.data);
         return result;
     }
 
@@ -194,7 +212,7 @@ export class TwitchHandler extends PlatformHandler {
         });
 
         let result = await response.json(); // echo on success, shows pending status
-        console.log("Result of Sub Attempt:", result);
+        // console.log("Result of Sub Attempt:", result);
         return response.status < 300 && response.status >= 200; // Success on 200 Status
     }
 
@@ -222,13 +240,13 @@ export class TwitchHandler extends PlatformHandler {
         if(callback == undefined) { callback = this.EventSubCallback; }
         await this.getAppToken();
         if(this.AppToken.AccessToken) {
-            console.log("Establishing Subs at Callback:", callback);
+            // console.log("Establishing Subs at Callback:", callback);
             let wanted_events = JSON.parse(JSON.stringify(this.default_events));
             let events = await this.checkSubscribedEvents(this.AppToken.AccessToken as string);
             for(let i = 0; i < events?.data?.length; i++) {
                 if(events.data[i].status === 'enabled' || events.data[i].status === 'webhook_callback_verification_pending') {
                     wanted_events[events.data[i].type] = null;
-                    console.log("Event Already Exists:", events.data[i].type);
+                    // console.log("Event Already Exists:", events.data[i].type);
                 }
             }
 
@@ -258,9 +276,13 @@ export class TwitchHandler extends PlatformHandler {
             case 'notification':
                 switch(notification?.subscription?.type) {
                     case 'stream.online':
-                        this.checkForLiveChange(true); break;
+                        this.checkForLiveChange(true, { checkPlatforms: true, attempts: 5, interval: 60 }); 
+                        // check other platforms?
+                        break;
                     case 'stream.offline':
-                        this.checkForLiveChange(false); break;
+                        this.checkForLiveChange(false, { checkPlatforms: true, attempts: 5, interval: 60 });
+                        // check other platforms?
+                        break;
                     default: 
                         break;
                 }
@@ -333,6 +355,20 @@ export class YoutubeHandler extends PlatformHandler {
         return result;
     }
 
+    public async forceAPILiveCheck(channel_id?: string, channel_name?: string) {
+        if(!channel_id) { channel_id = process.env.YOUTUBE_CHANNEL_ID; }
+
+        let url = `https://www.googleapis.com/youtube/v3/search`;
+        url += `?part=snippet&channelId=${channel_id}&type=video`;
+        url += `&eventType=live&key=${process.env.YOUTUBE_KEY}`;
+
+        let result = await(await fetch(url)).json();
+
+        console.log(`Youtube Live Check for ID: ${channel_id}:`, result);
+        this.VideoId = result?.items?.[0]?.id?.videoId ?? this.VideoId;
+        return result?.items?.length > 0;
+    }
+
     public getEmbedSource() {
         if(!this.VideoId)
             return `/embed?error=no_video_id`;
@@ -365,82 +401,6 @@ export class KickHandler extends PlatformHandler {
 
     public getEmbedSource() {
         return `https://player.kick.com/${process.env.KICK_CHANNEL}?autoplay=true`;
-    }
-}
-
-// Twitch / Event Sub Live Stuff
-export class _TwitchApp {
-
-    private access_token: string | undefined;
-    private expiration: { ts: number, in: number } | undefined;
-    private type: string | undefined;
-
-    constructor() {
-        this.getAppTokens();
-    }
-
-    public async forceCheckLive(broadcaster_id?: string, broadcaster_name?: string) {
-        if(!this.access_token) { await this.getAppTokens() }
-        if(!broadcaster_id && !broadcaster_name) { console.log("Invalid Input!"); return false; }
-        let url = `https://api.twitch.tv/helix/streams?first=1`;
-        url += `&type=live${broadcaster_id ? `&user_id=${broadcaster_id}` : ''}`;
-        url += `${broadcaster_name ? `&user_login=${broadcaster_name}` : ''}`;
-
-        let result = await(await fetch(url, { 
-            headers: { Authorization: `Bearer ${this.access_token}`, 'Client-Id': `${process.env.TWITCH_ID}` }
-        })).json();
-
-        // console.log(`Twitch Live Check for ${broadcaster_name ?? 'ID:' + broadcaster_id}:`, result);
-        return result?.data?.length > 0;
-    }
-
-    private async getAppTokens() {
-        let url = `https://id.twitch.tv/oauth2/token`;
-        let body = `client_id=${process.env.TWITCH_ID}&client_secret=${process.env.TWITCH_SECRET}&grant_type=client_credentials`;
-        let result = await (await fetch(url, {
-            method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body
-        })).json();
-
-        // console.log("Twitch App Results:", result);
-        this.access_token = result.access_token;
-        this.expiration = { ts: Date.now(), in: result.expires_in };
-        this.type = result.token_type;
-    }
-
-    // Set Live Sub / Get Current Live Status (Based on ENV | Owner's Twitch Broadcaster ID)
-    private async subToLiveNotifications(broadcaster_id: string) {
-
-    }
-}
-
-export class _YoutubeApp {
-
-    private api_key: string | undefined;
-    private stream_video_id: string | undefined;
-
-    constructor() {
-        this.api_key = process.env.YOUTUBE_KEY;
-    }
-
-    public async forceCheckLive(channel_id?: string, channel_name?: string) {
-        let url = `https://www.googleapis.com/youtube/v3/search`;
-        url += `?part=snippet&channelId=${channel_id}&type=video`;
-        url += `&eventType=live&key=${this.api_key}`;
-
-        let result = await(await fetch(url)).json();
-
-        console.log(`Youtube Live Check for ID: ${channel_id}:`, result);
-        this.stream_video_id = result?.items?.[0]?.id?.videoId;
-        return result?.items?.length > 0;
-    }
-
-    public async getStreamID(channel_id: string) {
-        if(this.stream_video_id) { return this.stream_video_id; }
-        // fetch api, save, return
-    }
-
-    public async scrapYoutubeLivePage(channel_name: string) {
-        // scraps html for `youtube.com/channel/${channel_name}/live` for details
     }
 }
 

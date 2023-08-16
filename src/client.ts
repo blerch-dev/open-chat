@@ -1,7 +1,7 @@
 import { Router } from "express";
 
 import { Server } from './server';
-import { AuthPage, DevPage, HomePage, LivePage, ProfilePage } from "./pages";
+import { AuthPage, ChatPage, DevPage, HomePage, LivePage, ProfilePage } from "./pages";
 import { Roles, RoleValue } from "./user";
 
 // Might move this to server as a public method
@@ -37,7 +37,9 @@ export const DefaultRoute = (server: Server): Router => {
 
     route.get('/profile', (req, res) => { res.send(ProfilePage(req, res, server.getProps())); });
     route.get('/live', (req, res) => { res.send(LivePage(req, res, server.getProps(), {})); }); // ChatOptions
-    route.get(['/chat', '/chat/embed'], (req, res, next) => { res.end(); });
+    route.get(['/chat', '/chat/embed'], (req, res, next) => { res.send(ChatPage(req, res, server.getProps(), {
+        
+    })) });
 
     route.get('/', (req, res) => { res.send(HomePage(req, res, server.getProps())); });
     route.all('*', (req, res) => { console.log("Hit End of Routes!"); res.end(); });

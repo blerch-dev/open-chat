@@ -79,24 +79,6 @@ export class Server {
         this.props.domain = `http${this.isProd() ? 's' : ''}://${this.isProd() ? 
             `${process.env.BASE_SUB ?? ""}${process.env.ROOT_URL}` : `${process.env.DEV_URL}:${process.env.SERVER_PORT}`}`;
 
-        // Embeds
-        const sortEmbeds = (...embeds: { platform: string, src: string, channel: string }[]) => {
-            return embeds.sort((a, b) => a.platform.localeCompare(b.platform));
-        }
-
-        ServerEvent.on('live-state-change', (data: Embed) => {
-            console.log("Live Status Changed:", data);
-            let index = this.props.embeds.map((em) => em.platform).indexOf(data.platform);
-            if(index >= 0) { 
-                if(data.live) { this.props.embeds[index] = data; }
-                else { this.props.embeds.splice(index, 1); }
-            } else if(data.live) { 
-                this.props.embeds = sortEmbeds(...this.props.embeds, data);
-            } else {
-                console.log(`Attempted to remove Embed: ${data.platform}, but was already out of list. Ignoring.`);
-            }
-        });
-
         // State Events from OBS/Platform Checks
         //ServerEvent.on('stream-start', (meta: { [key: string]: any }) => {});
         //ServerEvent.on('stream-stop', (meta: { [key: string]: any }) => {});
@@ -111,6 +93,26 @@ export class Server {
             new YoutubeHandler(),
             new KickHandler()
         );
+
+        // Embeds
+        const sortEmbeds = (...embeds: { platform: string, src: string, channel: string }[]) => {
+            return embeds.sort((a, b) => a.platform.localeCompare(b.platform));
+        }
+
+        ServerEvent.on('live-state-change', async (data: Embed) => {
+            console.log("Live Status Changed:", data);
+            if(data?.checkPlatforms) { this.platformManager.apiCheckPlatforms(data?.attempts, data?.interval) }
+
+            let index = this.props.embeds.map((em) => em.platform).indexOf(data.platform);
+            if(index >= 0) { 
+                if(data.live) { this.props.embeds[index] = data; }
+                else { this.props.embeds.splice(index, 1); }
+            } else if(data.live) { 
+                this.props.embeds = sortEmbeds(...this.props.embeds, data);
+            } else {
+                console.log(`Attempted to remove Embed: ${data.platform}, but was already out of list. Ignoring.`);
+            }
+        });
 
         // Format
         this.app.use(express.static(path.resolve(__dirname, './public/')));
@@ -310,19 +312,7 @@ class PlatformManager {
         const interval_func = async () => {
             if(!this.ShouldRunChecks) { return; }
             this.Log("Checking Live from Connections:" + (new Date()).toLocaleTimeString());
-            let keys = Object.keys(this.platformConnections);
-            for(let i = 0; i < keys.length; i++) {
-                let con = this.platformConnections[keys[i]] as PlatformHandler;
-
-                // Use's OBS Plugin Status Updates to Determine if Checks should be made
-                if(this.CheckForLive !== undefined && ((con.isLive && this.CheckForLive) || (!con.isLive && !this.CheckForLive))) {
-                    continue;
-                }
-
-                let result = !!await con.forceScrapLiveCheck();
-                this.Log("\t-> " + con.getPlatform() + "\t| " + result);
-                con.checkForLiveChange(result);
-            }
+            await this.scrapCheckPlatforms();
             this.Log("\n");
         }
 
@@ -334,5 +324,47 @@ class PlatformManager {
         }, time * 60 * 1000);
 
         interval_func();
+    }
+
+    public async apiCheckPlatforms(attempts = 1, interval = 60) {
+        let keys = Object.keys(this.platformConnections);
+        for(let i = 0; i < keys.length; i++) {
+            let con = this.platformConnections[keys[i]] as PlatformHandler;
+
+            // Use's OBS Plugin Status Updates to Determine if Checks should be made
+            if(this.CheckForLive !== undefined && ((con.isLive && this.CheckForLive) || (!con.isLive && !this.CheckForLive))) {
+                continue;
+            }
+
+            let result = !!await con.forceAPILiveCheck();
+            this.Log("\t-> " + con.getPlatform() + "\t| " + result);
+            con.checkForLiveChange(result);
+        }
+
+        attempts -= 1;
+        if(attempts > 0) { setTimeout(() => {
+            this.apiCheckPlatforms(attempts, interval);
+        }, interval * 1000); }
+    }
+
+    private async scrapCheckPlatforms(attempts = 1, interval = 60) {
+        let keys = Object.keys(this.platformConnections);
+        for(let i = 0; i < keys.length; i++) {
+            let con = this.platformConnections[keys[i]] as PlatformHandler;
+
+            // Use's OBS Plugin Status Updates to Determine if Checks should be made
+            if(this.CheckForLive !== undefined && ((con.isLive && this.CheckForLive) || (!con.isLive && !this.CheckForLive))) {
+                continue;
+            }
+
+            let result = !!await con.forceScrapLiveCheck();
+            this.Log("\t-> " + con.getPlatform() + "\t| " + result);
+            con.checkForLiveChange(result);
+        }
+
+        attempts -= 1;
+        if(attempts > 0) { setTimeout(() => {
+            this.scrapCheckPlatforms(attempts, interval);
+        }, interval * 1000); }
     }
 }
