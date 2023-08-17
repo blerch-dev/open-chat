@@ -3,6 +3,7 @@ import WebSocket from 'ws';
 import { Server } from "./server";
 import { User, RoleValue, RoleInterface, Status, UserData } from './user';
 import { ServerEvent } from './state';
+import { chatTimes } from './tools';
 
 // Here for Type Checking
 export interface ChatMessage {
@@ -80,11 +81,13 @@ export class SocketConnection {
 }
 
 class ChatEvent {
+    protected id: string;
+
     private respondents: Set<string> = new Set();
     private responses: Map<any, Set<string>> = new Map();
 
-    constructor(...valid_responses: string[]) {
-
+    constructor() {
+        this.id = User.GenerateUUID();
     }
 
     public Respond(user: User, response: any) {
@@ -99,6 +102,59 @@ class ChatEvent {
         }
 
         return true;
+    }
+
+    public getID() { return this.id; }
+
+    public toString() {
+        return 'undefined ChatEvent';
+    }
+
+    public toJSON() {
+        return {
+            id: this.id
+        };
+    }
+}
+
+class PollEvent extends ChatEvent {
+
+    private author: string;
+    private title: string;
+    private options: string[];
+
+    private values: number[];
+
+    constructor(author: string, title: string, options: string[]) {
+        super();
+
+        this.author = author;
+        this.title = title;
+        this.options = options;
+        this.values = Array(options.length).fill(0);
+    }
+
+    public Respond(user: User, response: any) {
+        if(super.Respond(user, response)) {
+            this.values[Number(response)] += 1;
+            return true;
+        }
+
+        return false;
+    }
+
+    public getValues() {
+        return [...this.values];
+    }
+
+    public toJSON() {
+        return {
+            id: this.id,
+            author: this.author,
+            title: this.title,
+            options: this.options,
+            values: this.values
+        }
     }
 }
 
@@ -236,7 +292,7 @@ export class ChatHandler {
                 ServerMessage: {
                     message: `Connected to Chat Anonymously.`,
                     icon: '/assets/info.svg',
-                    code: 0x001
+                    code: 0x002
                 }
             }));
         }
@@ -287,11 +343,28 @@ export class ChatHandler {
             switch(cmd) {
                 case '/poll':
                     this.runPoll(user, socket, ...args); break;
+                case '!ban':
+                    if(args.length < 4) { return this.invalidArgsLength(socket, cmd); }
+                    this.banUser(args[1], args[2], args[3], false);
+                    break;
+                case '!ipban':
+                    if(args.length < 4) { return this.invalidArgsLength(socket, cmd); }
+                    this.banUser(args[1], args[2], args[3], true);
+                    break;
+                case '!timeout':
+                    if(args.length < 4) { return this.invalidArgsLength(socket, cmd); }
+                    this.muteUser(args[1], args[2], args[3]);
+                    break;
+                case '!nuke':
+                    if(args.length < 2) { return this.invalidArgsLength(socket, cmd); }
+                    this.mutePhrase(args[1], args[2]);
+                    break;
                 default:
                     socket.send(JSON.stringify({ ServerMessage: {
                         message: `Invalid Command: ${cmd}`,
                         icon: '/assets/info.svg',
-                    } })); break;
+                    } }));
+                    break;
             }            
         }
 
@@ -325,9 +398,66 @@ export class ChatHandler {
         socket.on("error", (err) => { console.log("Socket Error:", err); });
     }
 
+    private invalidArgsLength(socket: any, command: string) {
+        socket.send(JSON.stringify({ ServerMessage: { message: `Invalid argument length for command '${command}'.`, } }));
+    }
+
+    private banUser(username: string, length: string, reason: string, withIP = false) {
+        // ban user
+        // broadcast user banned
+    }
+
+    private muteUser(username: string, length: string, reason: string) {
+        // mute user
+        // broadcast user muted
+    }
+
+    private mutePhrase(phrase: string, length?: string) {
+        // no length means indefinite
+        // mute phrase
+        // broadcast phrase mute
+        // keep list of muted phrases
+    }
+
     private runPoll(user: User, socket: WebSocket.WebSocket, ...args: string[]) {
-        // User/Socket is valid to run cmd, check args and if they are valid publish eventmessage
-        //this.publisher?.publish(`chat|msg`, msg);
+        // Might allow mulitple events, for now just one
+        if(this.currentEvent !== undefined) { 
+            socket.send(JSON.stringify({
+                ServerMessage: { message: "Can't start poll when a current ChatEvent is active." }
+            }));
+            return;
+        }
+
+        args.shift();
+        let time = (args.shift() as string) || '1m';
+        let title = args.shift();
+        let options = [...args];
+        if(!title || options.length < 1) {
+            return this.invalidArgsLength(socket, '/poll');
+        }
+
+        this.currentEvent = new PollEvent(user.getName(), title, options);
+        const id = this.currentEvent.getID();
+
+        // console.log("Publishing Event:", this.currentEvent.toJSON());
+        this.publisher?.publish(`chat|msg`, JSON.stringify({
+            EventMessage: {
+                type: 'event-poll',
+                data: this.currentEvent.toJSON()
+            }
+        }));
+
+        setTimeout(() => {
+            let data = this.currentEvent?.toJSON() ?? { id };
+            this.publisher?.publish(`chat|msg`, JSON.stringify({
+                EventMessage: {
+                    type: 'event-close',
+                    data: data
+                }
+            }));
+
+            this.currentEvent = undefined;
+        }, chatTimes(time));
     }
 
     private checkEmbeds() {

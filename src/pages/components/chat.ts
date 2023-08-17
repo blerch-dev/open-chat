@@ -3,10 +3,11 @@ interface chatOptions {
     directLink?: string,
     transparent?: boolean,
     flex?: boolean,
+    header?: boolean,
     controls?: boolean
 }
 
-export const ChatComponent = (data: any = {}, options: chatOptions = {}, isDev = false) => {
+export const ChatComponent = (data: any = {}, options: chatOptions = {}, isDev = false, query: any = {}) => {
     let cv = 0;
     const getNV = (sv?: number) => { if(sv != undefined) { cv = sv; } return ('0' + cv++).slice(-2) }
     return `
@@ -15,7 +16,7 @@ export const ChatComponent = (data: any = {}, options: chatOptions = {}, isDev =
         data-embed="${options?.embed ?? ''}" 
         data-link="${options?.directLink ?? ''}"
     >
-        <header${options?.controls === false ? ' class="hide"' : ''}>
+        <header${options?.controls === false || options?.header === false ? ' class="hide"' : ''}>
             <h4 id="ChatStatus">${data?.content?.chat ?? ""}</h4>
             <div class="chat-controls">
                 <span tabindex="2${getNV(0)}" id="ChatSettingsButton" title="Settings"><img style="width: 16px;" src="/assets/icons/settings.svg"></span>

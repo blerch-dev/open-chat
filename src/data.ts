@@ -348,6 +348,12 @@ export class DatabaseConnection {
 
         return false;
     }
+
+    public async getOwnerConnections() {
+        // get uuid of owner
+        // if result, return all connections for that uuid
+        // else return error
+    }
     // #endregion
 
     // #region Tokens

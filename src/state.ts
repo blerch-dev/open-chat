@@ -276,11 +276,11 @@ export class TwitchHandler extends PlatformHandler {
             case 'notification':
                 switch(notification?.subscription?.type) {
                     case 'stream.online':
-                        this.checkForLiveChange(true, { checkPlatforms: true, attempts: 5, interval: 60 }); 
+                        this.checkForLiveChange(true, { checkPlatforms: true, attempts: 2, interval: 60 }); 
                         // check other platforms?
                         break;
                     case 'stream.offline':
-                        this.checkForLiveChange(false, { checkPlatforms: true, attempts: 5, interval: 60 });
+                        this.checkForLiveChange(false, { checkPlatforms: true, attempts: 2, interval: 60 });
                         // check other platforms?
                         break;
                     default: 

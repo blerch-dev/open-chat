@@ -188,7 +188,7 @@ export const ProfilePage = (req: any, res: any, data: any = {}) => {
     <div id="Owner" class="profile-section">
         <h2>Owner</h2>
         <span>
-            
+
         </span>
     </div>
     `;
@@ -324,6 +324,7 @@ export const LivePage = (req: any, res: any, data: any = {}, options: any = {}) 
 }
 
 export const ChatPage = (req: any, res: any, data: any = {}, options: any = {}) => {
+    data['site'].transparent = options.transparent ?? data['site']?.transparent;
     return MinimumLayout(req, res, data, `${ChatComponent(data, options, !!isDev(req))}`);
 }
 

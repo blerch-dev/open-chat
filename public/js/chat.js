@@ -1,5 +1,5 @@
 const Log = (...args) => {
-    if(PageManager.instance.settings?.devDebug) { console.log(...args); }
+    if(PageManager.instance.GetSettings().devDebug) { console.log(...args); }
 }
 
 class PageManager {
@@ -82,10 +82,12 @@ class PageManager {
             case "ChatSettingsButton":
                 this.toggleSettings(); break;
             case "ChatPopoutButton":
-                window.open(this.#chatSocket.loc.origin + '/chat', '_blank', 
+                window.open(this.#chatSocket.loc.origin + '/chat?popout=1&header=0', '_blank', 
                     'location=yes,height=900,width=300,scrollbars=no,status=yes');
                 this.#chatSocket.removeChatWindow(1000); break;
             case "ChatCloseButton":
+                let param = (new URL(window.location)).searchParams;
+                if(param.get("popout") == '1') { return window.close(); }
                 this.#chatSocket.removeChatWindow(1001); break;
             case "ChatEmbeds":
                 let time_check = Date.now() - this.#embeds.last_check < this.#embeds.cache_time * 1000;
@@ -181,6 +183,8 @@ class PageManager {
         }
     }
 
+    GetSettings = () => { return this.#settings; }
+
     SetElemValue = (elem, value) => {
         switch(elem.type) {
             case "checkbox":
@@ -221,7 +225,7 @@ class PageManager {
         const badges = (roles) => {
             let badgeStr = "";
             for(let i = 0; i < roles.length; i++) {
-                badgeStr += `<img class="user-badge" src="${msg.roles[0].icon}" title="${msg.roles[0].name}"></img>`
+                badgeStr += `<img class="user-badge" src="${roles[i].icon}" title="${roles[i].name}"></img>`
             }
 
             return badgeStr;
@@ -230,10 +234,9 @@ class PageManager {
         let elem = document.createElement('div');
         elem.classList.add('chat-message', this.#even ? undefined : 'odd');
         this.#even = !this.#even;
-        elem.innerHTML = `
-            <p><span class="user-tag" style="color: ${data.roles[0]?.color ?? '#ffffff'}">
-                    ${badges(data.roles)}${data.username}</span>: ${data.message}</p>
-        `;
+        let html = `<p><span class="user-tag" style="color: ${data?.roles[0]?.color ?? '#ffffff'}">`;
+        html += `${badges(data?.roles)}${data?.username}</span>: ${data?.message}</p>`;
+        elem.innerHTML = html;    
     
         return this.#chatElems.list.appendChild(elem);
     }
@@ -379,7 +382,8 @@ class ChatSocket {
         // Chat URL Parser
         const secure = window.location.protocol === 'https:';
         const local = window.location.hostname.includes('localhost');
-        const url = `${local ? '' : 'chat.'}${window.location.host.split(".").slice(-2).join(".")}`;
+        const ngrok = window.location.hostname.includes('ngrok-free');
+        const url = `${local || ngrok ? '' : 'chat.'}${window.location.host.split(".").slice(ngrok ?  - 3 : -2).join(".")}`;
         const fullURL = `${secure ? 'wss' : 'ws'}://${url}/`;
 
         this.connect(fullURL);
@@ -411,7 +415,7 @@ class ChatSocket {
         }
 
         const chatMessage = (json) => {
-            this.pageManager.addChatMessageElem(json.chatMessage);
+            this.pageManager.addChatMessageElem(json.ChatMessage);
         }
 
         const serverMessage = (json) => {
@@ -445,7 +449,7 @@ class ChatSocket {
         if(!(this.socket instanceof WebSocket) || typeof(value) !== 'string' || value == "")
             return;
         
-        console.log("Value Type:", typeof(value), value);
+        // console.log("Value Type:", typeof(value), value);
         if(typeof(value) === 'object') {
             return this.socket.send(JSON.stringify(value));
         }
@@ -463,6 +467,7 @@ class ChatSocket {
         if(addMessage) {  msg.message = value; }
         this.socket.send(JSON.stringify(msg));
         // add chat elem here if local is required
+        this.pageManager.setInputValue('');
     }
 
     removeChatWindow(code) {

@@ -101,7 +101,7 @@ export class Server {
 
         ServerEvent.on('live-state-change', async (data: Embed) => {
             console.log("Live Status Changed:", data);
-            if(data?.checkPlatforms) { this.platformManager.apiCheckPlatforms(data?.attempts, data?.interval) }
+            if(data?.checkPlatforms) { await this.platformManager.apiCheckPlatforms(data?.attempts, data?.interval) }
 
             let index = this.props.embeds.map((em) => em.platform).indexOf(data.platform);
             if(index >= 0) { 
@@ -359,12 +359,14 @@ class PlatformManager {
 
             let result = !!await con.forceScrapLiveCheck();
             this.Log("\t-> " + con.getPlatform() + "\t| " + result);
-            con.checkForLiveChange(result);
+            if(con.checkForLiveChange(result)) { return true; }
         }
 
         attempts -= 1;
         if(attempts > 0) { setTimeout(() => {
             this.scrapCheckPlatforms(attempts, interval);
-        }, interval * 1000); }
+        }, interval * 1000); return false; } else {
+            return true;
+        }
     }
 }

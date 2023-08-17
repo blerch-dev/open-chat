@@ -39,3 +39,34 @@ export function verifyHmac(hmac: string, verifySignature: string) {
     // console.log("Verifying:", hmac, verifySignature);
     return Crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(verifySignature));
 }
+
+export function chatTimes(input: string) {
+    let tf = input.charAt(input.length - 1);
+    let time = Number(input.replace(/\D/g,''));
+    // console.log("Chat Time:", input, tf, time);
+    if(isNaN(time)) { return -1; }
+    
+    const minute = 60 * 1000;
+    const hour = minute * 60;
+    const day = hour * 24;
+    const week = day * 7;
+    const month = week * 4 + day * 2; // clean 30
+    const year = month * 12 + day * 5; // clean 365
+
+    switch(tf) {
+        case 'y':
+            return time * year;
+        case 'M':
+            return time * month;
+        case 'w':
+            return time * week;
+        case 'd':
+            return time * day;
+        case 'h':
+            return time * hour;
+        case 'm':
+            return time * minute;
+        default:
+            return time * hour;
+    }
+}
