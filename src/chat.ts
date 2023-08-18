@@ -82,12 +82,14 @@ export class SocketConnection {
 
 class ChatEvent {
     protected id: string;
+    protected expires: number;
 
     private respondents: Set<string> = new Set();
     private responses: Map<any, Set<string>> = new Map();
 
-    constructor() {
+    constructor(expiration: number = 1000 * 60) {
         this.id = User.GenerateUUID();
+        this.expires = Date.now() + expiration;
     }
 
     public Respond(user: User, response: any) {
@@ -112,7 +114,8 @@ class ChatEvent {
 
     public toJSON() {
         return {
-            id: this.id
+            id: this.id,
+            expires: this.expires
         };
     }
 }
@@ -123,6 +126,7 @@ class PollEvent extends ChatEvent {
     private title: string;
     private options: string[];
 
+    private started: number;
     private values: number[];
 
     constructor(author: string, title: string, options: string[]) {
@@ -131,6 +135,8 @@ class PollEvent extends ChatEvent {
         this.author = author;
         this.title = title;
         this.options = options;
+
+        this.started = Date.now();
         this.values = Array(options.length).fill(0);
     }
 
@@ -150,6 +156,8 @@ class PollEvent extends ChatEvent {
     public toJSON() {
         return {
             id: this.id,
+            expires: this.expires,
+            started: this.started,
             author: this.author,
             title: this.title,
             options: this.options,

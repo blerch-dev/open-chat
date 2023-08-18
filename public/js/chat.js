@@ -19,6 +19,10 @@ class PageManager {
     // Chat Elem States
     #even = false;
 
+    // Events
+    #currentEvent = null;
+    #currentEventCB = null;
+
     constructor() {
         PageManager.instance = this;
         document.addEventListener('DOMContentLoaded', () => { this.onPageLoad(); })
@@ -32,7 +36,8 @@ class PageManager {
             list: document.getElementById("ChatMessageList"),
             input: document.getElementById("ChatInput"),
             submit: document.getElementById("ChatSend"),
-            status: document.getElementById("ChatStatus")
+            status: document.getElementById("ChatStatus"),
+            events: document.getElementById("InteractList")
         }
 
         this.#embedManager = new EmbedManager(document.getElementById('EmbedWindow'), this);
@@ -259,7 +264,7 @@ class PageManager {
 
     handleEventMessage(event) {
         const renderEventMessage = (json) => {
-            console.log("Rendering Event Message:", json);
+            // console.log("Rendering Event Message:", json);
             switch(json.type) {
                 case 'embeds':
                     let embeds = Object.keys(json.data).map((val) => { return { name: val, count: json.data[val] } });
@@ -288,9 +293,46 @@ class PageManager {
 
                 // Copy dgg embed style at top/figure out something similar
                 return renderEventMessage(event);
+            case 'event-poll':
+                this.handlePoll(event.data); break;
             default:
                 break;
         }
+    }
+    // #endregion
+
+    // #region Events
+    handlePoll(data) {
+        if(this.#currentEvent != null) { return; }
+        this.#currentEvent = data;
+
+        let elem = document.createElement('div');
+        elem.classList.add('poll-container');
+        elem.innerHTML = `
+            <span class="poll-title">${data.title}</span>
+            <p class="poll-author">Started by ${data.author}</p>
+            <div>
+                ${data.options.map((val, ind) => `
+                    <span class="poll-option">${val}
+                        <span class="poll-option-value" data-option="${ind}">${data?.values?.[ind] ?? 0}<span>
+                    </span>`
+                ).join('')}
+            </div>
+            <span id="poll-clock" class="poll-clock"></span>
+        `;
+
+        elem = this.#chatElems.events.appendChild(elem);
+        let elems = elem.getElementsByClassName('poll-option-value');
+        
+        const handler = (ts) => {
+            console.log(ts, data.started, data.expires, (data.expires - Date.now()) / (data.expires - data.started));
+            // check for updates to values
+            // apply values to value elements
+            // calculate time change
+            requestAnimationFrame(handler);
+        }
+
+        handler();
     }
     // #endregion
 }
