@@ -363,6 +363,7 @@ class EmbedManager {
         let manual_embed = window.location.hash;
 
         this.#embedStatusElems = {
+            iframe: document.getElementById("EmbedSource"),
             type: document.getElementById("HeaderStatusType"),
             embed: document.getElementById("HeaderStatusEmbed"),
             source: document.getElementById("HeaderStatusSource"),
@@ -372,8 +373,7 @@ class EmbedManager {
     setEmbedDirectly(url, platform, channel) {
         // server is responsible for direct iframe info
         console.log("Set Embed Directly:", url, platform, channel);
-        // set embed selected as "selected"
-
+        this.#embedStatusElems.iframe.src = url;
     }
 
     setEmbed(platform, channel) {
@@ -394,6 +394,12 @@ class EmbedManager {
         if(data.live) { this.#embeds.push(data); }
 
         // Change Elem
+
+        // Header Elem (might just hide and always send with html)
+        /*
+        `<img data-click="set-embed-directly" data-click-args="${emb.src}|${emb.platform}|${emb.channel}" 
+            title="${emb.platform}" src="${img_src}"${index == 0 ? 'class="selected"' : ''}/>`;
+        */
     }
 
     setEmbedElem(target) {

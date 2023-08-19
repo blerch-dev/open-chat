@@ -300,8 +300,9 @@ export class ChatHandler {
                 ServerMessage: {
                     message: `Connected to Chat Anonymously.`,
                     icon: '/assets/info.svg',
-                    code: 0x002
-                }
+                    code: 0x001
+                },
+                MessageQueue: this.ChatHistory
             }));
         }
 
@@ -351,6 +352,9 @@ export class ChatHandler {
             switch(cmd) {
                 case '/poll':
                     this.runPoll(user, socket, ...args); break;
+                case '/live':
+                    this.server.getPlatformManager().apiCheckPlatforms(1);
+                    break;
                 case '!ban':
                     if(args.length < 4) { return this.invalidArgsLength(socket, cmd); }
                     this.banUser(args[1], args[2], args[3], false);

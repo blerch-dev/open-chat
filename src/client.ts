@@ -3,6 +3,7 @@ import { Router } from "express";
 import { Server } from './server';
 import { AuthPage, ChatPage, DevPage, HomePage, LivePage, ProfilePage } from "./pages";
 import { Roles, RoleValue } from "./user";
+import { TwitchHandler } from "./state";
 
 // Might move this to server as a public method
 let devPermCheck = (req: any, res: any, next: any) => {
@@ -27,6 +28,10 @@ export const DefaultRoute = (server: Server): Router => {
 
     // Admin | Owner Routes
     route.get('/admin', devPermCheck, (req, res, next) => { DevPage(req, res, server.getProps(), server); }); // Async Handles Send
+    route.get('/state/twitch/eventsub', devPermCheck, async (req, res, next) => { 
+        let tpm = server.getPlatformManager().getPlatformConnections('twitch') as TwitchHandler;
+        res.json(await tpm.checkSubscribedEvents());
+    });
 
     // Page Routes
     route.get(['/login', '/signup', '/auth'], (req, res) => { res.send(AuthPage(req, res, server.getProps())); });

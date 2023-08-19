@@ -99,6 +99,7 @@ export class PlatformHandler {
     public getLatestScrap() { return { address: this.LatestScrapAddress, value: this.LatestScrapText}; }
 }
 
+// might want to store some info from api results for better auto handle
 export class TwitchHandler extends PlatformHandler {
 
     private AppToken: {
@@ -109,9 +110,9 @@ export class TwitchHandler extends PlatformHandler {
 
     private EventSubCallback: string;
 
-    private HMAC_PREFIX = 'sha256='
-    private HMAC: string = randomValue(64);
-
+    private HMAC_PREFIX = 'sha256=';
+    private HMAC: string = process.env.TWITCH_EVENTSUB_SECRET ?? randomValue(64); // need to save randomValue to file or something
+ 
     private TWITCH_MESSAGE_ID = 'Twitch-Eventsub-Message-Id'.toLowerCase();
     private TWITCH_MESSAGE_TIMESTAMP = 'Twitch-Eventsub-Message-Timestamp'.toLowerCase();
     private TWITCH_MESSAGE_SIGNATURE = 'Twitch-Eventsub-Message-Signature'.toLowerCase();
@@ -168,7 +169,10 @@ export class TwitchHandler extends PlatformHandler {
     }
 
     // EventSub
-    public async checkSubscribedEvents(app_token: string) {
+    public async checkSubscribedEvents(app_token?: string) {
+        if(app_token === undefined) { await this.getAppToken(); }
+        app_token ??= this.AppToken.AccessToken;
+
         let response = await fetch('https://api.twitch.tv/helix/eventsub/subscriptions', {
             method: 'GET',
             headers: {
@@ -183,9 +187,9 @@ export class TwitchHandler extends PlatformHandler {
         return result;
     }
 
-    public async clearBadEvents(app_token: string, events: any[]) {
+    public async clearBadEvents(app_token: string, events: any[], force = false) {
         for(let i = 0; i < events.length; i++) {
-            if(events[i].status === 'enabled' || events[i].status === 'webhook_callback_verification_pending')
+            if(force === false && (events[i].status === 'enabled' || events[i].status === 'webhook_callback_verification_pending'))
                 continue;
 
             let response  = await fetch(`https://api.twitch.tv/helix/eventsub/subscriptions?id=${events[i].id}`, {
@@ -219,19 +223,20 @@ export class TwitchHandler extends PlatformHandler {
     public eventSubMiddleware = async (req: any, res: any) => {
         const hmac_message = this.getHmacMessage(req);
         const hmac = this.HMAC_PREFIX + createHmac(this.HMAC, hmac_message);
-        if(true === verifyHmac(hmac, req.headers[this.TWITCH_MESSAGE_SIGNATURE])) {
+        const verify = verifyHmac(hmac, req.headers[this.TWITCH_MESSAGE_SIGNATURE])
+        if(verify === true) {
+            // console.log("Eventsub Verified! -", hmac, req.headers[this.TWITCH_MESSAGE_SIGNATURE]);
             const notification = req.body, type = req.headers[this.TWITCH_MESSAGE_TYPE];
-            // console.log(`Notification (${type}): `, notification);
-
             if(type === 'webhook_callback_verification') {
                 // console.log("Webhook Challenge:", notification.challenge);
                 res.status(200).send(notification.challenge);
             } else {
+                console.log(`Notification (${type}): `, notification);
                 res.sendStatus(200);
                 this.handleEventSub(type, notification);
             }
         } else {
-            console.log("Failed! - ", hmac_message, hmac, req.headers[this.TWITCH_MESSAGE_SIGNATURE]);
+            console.log("Eventsub Failed! - ", hmac, req.headers[this.TWITCH_MESSAGE_SIGNATURE]);
             res.sendStatus(403);
         }
     }
@@ -240,10 +245,12 @@ export class TwitchHandler extends PlatformHandler {
         if(callback == undefined) { callback = this.EventSubCallback; }
         await this.getAppToken();
         if(this.AppToken.AccessToken) {
+            const FORCE_CLEAR = false;
             // console.log("Establishing Subs at Callback:", callback);
             let wanted_events = JSON.parse(JSON.stringify(this.default_events));
             let events = await this.checkSubscribedEvents(this.AppToken.AccessToken as string);
             for(let i = 0; i < events?.data?.length; i++) {
+                if(FORCE_CLEAR) { continue; }
                 if(events.data[i].status === 'enabled' || events.data[i].status === 'webhook_callback_verification_pending') {
                     wanted_events[events.data[i].type] = null;
                     // console.log("Event Already Exists:", events.data[i].type);
@@ -251,7 +258,7 @@ export class TwitchHandler extends PlatformHandler {
             }
 
             wanted_events = Object.fromEntries(Object.entries(wanted_events).filter(([_, v]) => v != null));
-            await this.clearBadEvents(this.AppToken.AccessToken, events.data);
+            await this.clearBadEvents(this.AppToken.AccessToken, events.data, FORCE_CLEAR);
 
             let keys = Object.keys(wanted_events);
             for(let i = 0; i < keys.length; i++) {
@@ -356,7 +363,11 @@ export class YoutubeHandler extends PlatformHandler {
     }
 
     public async forceAPILiveCheck(channel_id?: string, channel_name?: string) {
-        if(!channel_id) { channel_id = process.env.YOUTUBE_CHANNEL_ID; }
+        if(!channel_id) { 
+            if(process.env.YOUTUBE_CHANNEL_ID == "") { return false; }
+            console.log("Using Youtube ENV ID:", process.env.YOUTUBE_CHANNEL_ID);
+            channel_id = process.env.YOUTUBE_CHANNEL_ID; 
+        }
 
         let url = `https://www.googleapis.com/youtube/v3/search`;
         url += `?part=snippet&channelId=${channel_id}&type=video`;
