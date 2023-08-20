@@ -40,12 +40,12 @@ class PageManager {
             events: document.getElementById("InteractList")
         }
 
-        this.#embedManager = new EmbedManager(document.getElementById('EmbedWindow'), this);
-        this.#chatSocket = new ChatSocket(this.#chatElems.frame, this);
-
         // Settings
         this.#settings = {};
         Log("Load Settings:", this.LoadSettings(this.#settings, true));
+
+        this.#embedManager = new EmbedManager(document.getElementById('EmbedWindow'), this);
+        this.#chatSocket = new ChatSocket(this.#chatElems.frame, this);
     
         // Events
         this.#chatElems.input.addEventListener('keydown', (e) => { this.onKeyPress(e); });
@@ -124,7 +124,12 @@ class PageManager {
             case "set-embed":
                 this.#embedManager.setEmbed(...(e.target.dataset?.clickArgs.split('|') ?? [])); break;
             case "set-embed-directly":
+                if(e.target.classList.contains('selected')) { break; }
                 this.#embedManager.setEmbedDirectly(...(e.target.dataset?.clickArgs.split('|') ?? [])); break;
+            case "clear-embed":
+                if(!e.target.classList.contains('embed')) { break; }
+                this.#embedManager.setEmbedDirectly("");
+                this.#embedManager.setEmbedElem(undefined);
             default:
                 break;
         }
@@ -250,6 +255,7 @@ class PageManager {
         // Will change to icon/status symbol instead of text
         let code = data?.code;
         if(typeof(code) === 'number') {
+            console.log("User:", data?.user);
             if(code === 1) { this.#chatElems.status.textContent = "Connected" }
             else { this.#chatElems.status.textContent = "" }
         }
@@ -349,9 +355,9 @@ class Embed {
 // needs hash management for embed support, server is ready - todo
 class EmbedManager {
 
-    // Platforms Live for Target Channel, Not Manual Embeds
-        // someway for users to select preferred embed, drag and drop list in settings page - todo
     #embeds = [];
+    #currentEmbed = undefined;
+    #default = "";
 
     #embedStatusElems = {
         type: null,
@@ -360,51 +366,107 @@ class EmbedManager {
     }
 
     constructor(embedElem, pageManager) {
-        let manual_embed = window.location.hash;
-
         this.#embedStatusElems = {
+            pill: document.getElementById("HeaderStatus"),
             iframe: document.getElementById("EmbedSource"),
             type: document.getElementById("HeaderStatusType"),
             embed: document.getElementById("HeaderStatusEmbed"),
             source: document.getElementById("HeaderStatusSource"),
         }
+
+        window.addEventListener('hashchange', (event) => {
+            this.handleHash(window.location.hash);
+        });
+
+        this.#default = this.#embedStatusElems?.embed?.value;
+        this.handleHash(window.location.hash);
     }
 
     setEmbedDirectly(url, platform, channel) {
         // server is responsible for direct iframe info
-        console.log("Set Embed Directly:", url, platform, channel);
+        Log("Set Embed Directly:", url, platform, channel);
         this.#embedStatusElems.iframe.src = url;
     }
 
     setEmbed(platform, channel) {
         // client embeds will have a shortcut/table to look from
+        let src = this.getEmbedSource(platform, channel);
+        this.#embedStatusElems.iframe.src = src;
+        const embed = { src, platform, channel };
+        this.#currentEmbed = embed;
+        this.setEmbedElem(embed);
+    }
+
+    handleHash(hash) {
+        if(!hash) { return; }
+        Log("Embedding Hash:", hash);
+        hash = hash.substring(1);
+        this.setEmbed(...hash.split('/'));
     }
 
     handleLiveState(data) {
+        console.log("Handling Live:", data, this.#embeds);
+        let changed = false;
         for(let i = 0; i < this.#embeds.length; i++) {
-            let em = this.#embeds[i];
-            if(em.platform == data.platform) { 
-                if(data.live) { em = data; }
-                else { this.#embeds.splice(i, 1); }
-                return;
-            }
+            if(this.#embeds[i].platform == data.platform) { changed = true; this.#embeds[i] = data }
         }
 
         // No Platform Match
-        if(data.live) { this.#embeds.push(data); }
-
-        // Change Elem
-
-        // Header Elem (might just hide and always send with html)
-        /*
-        `<img data-click="set-embed-directly" data-click-args="${emb.src}|${emb.platform}|${emb.channel}" 
-            title="${emb.platform}" src="${img_src}"${index == 0 ? 'class="selected"' : ''}/>`;
-        */
+        if(!changed && data.live) { this.#embeds.push(data); }
     }
 
-    setEmbedElem(target) {
-        //<img data-click="set-embed-directly" data-click-args="${emb.src}|${emb.platform}|${emb.channel}" 
-            //title="${emb.platform}" src="${img_src}"/>
+    setEmbedElem(embed = this.#embeds) {
+        let embeds = Array.isArray(embed) ? embed : [embed].filter(val => val != undefined);
+        const imgSrc = (emb, index) => {
+            let img_src = "";
+            switch(emb.platform.toLowerCase()) {
+                case "twitch":
+                    img_src = "/assets/logos/twitch.svg"; break;
+                case "youtube":
+                    img_src = "/assets/logos/youtube.svg"; break;
+                default:
+                    img_src = "/assets/icons/info.svg"; break;
+            }
+
+            return `<img data-click="set-embed-directly" data-click-args="${emb.src}|${emb.platform}|${emb.channel}" 
+                title="${emb.platform}" src="${img_src}"${index == 0 ? ' class="selected"' : ''}/>`
+        }
+        
+        let em_str = embeds.map(imgSrc).join('');
+        Log("Setting Embed Elem:", embed);
+        if(embeds.length === 0) {
+            this.#embedStatusElems.type.textContent = "Offline";
+            this.#embedStatusElems.source.innerHTML = "●";
+            this.#embedStatusElems.embed.textContent = this.#default;
+        } else {
+            let type = embed?.live === undefined ? "Embed" : embed?.live ? "Live" : "Offline";
+            Log("Setting Elems:", type, em_str, embed?.channel ?? "");
+            this.#embedStatusElems.type.textContent = type;
+            this.#embedStatusElems.source.innerHTML = em_str;
+            this.#embedStatusElems.embed.textContent = embed?.channel ?? "";
+            if(embed?.live === undefined) { this.#embedStatusElems.pill.classList.add('embed'); }
+        }
+    }
+
+    getEmbedSource(platform, id, withParent = true) {
+        let pstr = withParent ? `&parent=${window.location.hostname}` : '';
+        let embed = (platform && id) ? [platform, id] : window.location.hash?.split('/');
+        switch(embed[0]) {
+            case "#youtube":
+            case "youtube":
+                return `https://www.youtube.com/embed/${embed[1]}?autoplay=1&playsinline=1&hd=1${pstr}`;
+            case "#twitch":
+            case "twitch":
+                return `https://player.twitch.tv/?channel=${embed[1]}${pstr}`;
+            case "#kick":
+            case "kick":
+                return `https://player.kick.com/${embed[1]}?autoplay=true${pstr}`;
+            case "#rumble":
+            case "rumble":
+                return `https://rumble.com/embed/${embed[1]}/?pub=7a20&rel=5&autoplay=2${pstr}`;
+            default:
+                return ""; // could embed error page
+        }
     }
 }
 

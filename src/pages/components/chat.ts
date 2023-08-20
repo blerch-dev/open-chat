@@ -19,10 +19,10 @@ export const ChatComponent = (data: any = {}, options: chatOptions = {}, isDev =
         <header${options?.controls === false || options?.header === false ? ' class="hide"' : ''}>
             <h4 id="ChatStatus">${data?.content?.chat ?? ""}</h4>
             <div class="chat-controls">
-                <span tabindex="2${getNV(0)}" id="ChatSettingsButton" title="Settings"><img style="width: 16px;" src="/assets/icons/settings.svg"></span>
+                <span tabindex="3${getNV(0)}" id="ChatSettingsButton" title="Settings"><img style="width: 16px;" src="/assets/icons/settings.svg"></span>
                 ${options?.controls === false ? '' : `
-                    <span tabindex="2${getNV()}" id="ChatPopoutButton" title="Popout"><img src="/assets/icons/popout.svg"></span>
-                    <span tabindex="2${getNV()}" id="ChatCloseButton" title="Close"><img src="/assets/icons/exit.svg"></span>
+                    <span tabindex="3${getNV()}" id="ChatPopoutButton" title="Popout"><img src="/assets/icons/popout.svg"></span>
+                    <span tabindex="3${getNV()}" id="ChatCloseButton" title="Close"><img src="/assets/icons/exit.svg"></span>
                 `}
             </div>
         </header>

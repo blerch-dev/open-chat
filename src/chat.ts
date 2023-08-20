@@ -224,7 +224,7 @@ export class ChatHandler {
         this.wss.on("connection", (...args) => { this.onConnection(...args) });
 
         // Live Status Events
-        ServerEvent.on('live-state-change', (data: { platform: string, src: string, live: boolean }) => {
+        ServerEvent.on('live-state-change', (data: { platform: string, channel: string, src: string, live: boolean }) => {
             console.log("Broadcasting Live State Change:", data);
             this.broadcast(JSON.stringify({
                 EventMessage: {
@@ -286,6 +286,7 @@ export class ChatHandler {
             socket.send(JSON.stringify({
                 ServerMessage: {
                     message: `Connected to Chat as ${user.getName()}.`,
+                    user: user.toJSON(),
                     icon: '/assets/icons/info.svg',
                     status: stat,
                     code: 0x001

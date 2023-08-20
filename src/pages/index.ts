@@ -3,10 +3,8 @@ import * as dotenv from 'dotenv';
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 import { 
-    DefaultHead, 
     DefaultLayout, 
     MinimumLayout, 
-    HeaderComponent, 
     ChatComponent, 
     EmbedComponent 
 } from './components';
@@ -313,18 +311,18 @@ export const ErrorPage = (req: any, res: any, data: any = {}, error: { Message?:
 export const LivePage = (req: any, res: any, data: any = {}, options: any = {}) => {
     let page = `
         <main class="live-page">
-            ${EmbedComponent(data, options)}
+            ${EmbedComponent(req, data, options)}
             ${ChatComponent(data, options, !!isDev(req))}
         </main>
     `;
 
-    return DefaultLayout(req, res, data, `
+    return MinimumLayout(req, res, data, `
         ${page}
     `);
 }
 
 export const ChatPage = (req: any, res: any, data: any = {}, options: any = {}) => {
-    data['site'].transparent = options.transparent ?? data['site']?.transparent;
+    data['site'].transparent = options.transparent ?? data['site']?.transparent; // whole page transparent bg
     return MinimumLayout(req, res, data, `${ChatComponent(data, options, !!isDev(req))}`);
 }
 

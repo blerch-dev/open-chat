@@ -6,13 +6,85 @@
 #EmbedWindow {
     flex: 1;
     display: flex;
+    flex-direction: column;
     background-color: #00000088;
+
+    #EmbedHeader {
+        min-height: 30px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: row;
+        gap: 5px;
+        padding: 0px 5px;
+        align-items: center;
+        justify-content: space-between;
+        background-color: var(--header-bg);
+
+        &.dynamic {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            background-color: #ffffff00;
+            transition: 0.5s all;
+
+            &:hover {
+                background-color: #ffffff10;
+            }
+        }
+
+        .embed-header-group {
+            display: flex;
+            flex-direction: row;
+            gap: 5px;
+        }
+
+        #HeaderStatus {
+            padding: 5px 10px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            background-color: var(--page-bg);
+
+            &.embed {
+                background-color: var(--bad);
+                cursor: pointer;
+            }
+
+            &.is-live {
+                background-color: var(--theme-main);
+            }
+
+            & > p {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            #HeaderStatusSource {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            
+                img {
+                    opacity: 0.6;
+                    height: 16px;
+                    cursor: pointer;
+
+                    &.selected {
+                        opacity: 1;
+                    }
+                }
+            }
+        }
+    }
 
     #EmbedSource {
         border: none;
         outline: none;
         width: 100%;
-        height: 100%;
+        // height: 100%;
+        flex: 1;
     }
 
     #EmbedBackground {

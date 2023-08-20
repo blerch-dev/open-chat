@@ -71,53 +71,19 @@ header {
         display: flex;
         align-items: center;
 
-        & > .header-links {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            padding: 0px 15px;
-            gap: 10px;
-        }
-
         & > .header-controls {
             display: flex;
             align-items: center;
             gap: 10px;
-
-            & > #HeaderStatus {
-                padding: 5px 10px;
-                border-radius: 15px;
-                display: flex;
-                align-items: center;
-                background-color: var(--page-bg);
-
-                &.is-live {
-                    background-color: var(--theme-main);
-                }
-
-                & > p {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-
-                #HeaderStatusSource {
-                    display: flex;
-                    align-items: center;
-                    gap: 4px;
-                
-                    img {
-                        opacity: 0.6;
-                        height: 16px;
-                        cursor: pointer;
-
-                        &.selected {
-                            opacity: 1;
-                        }
-                    }
-                }
-            }
         }
+    }
+
+    .header-links {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        padding: 0px 15px;
+        gap: 10px;
     }
 }
 
