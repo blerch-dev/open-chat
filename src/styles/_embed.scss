@@ -59,12 +59,15 @@
                 display: flex;
                 align-items: center;
                 gap: 8px;
+                pointer-events: none;
+                user-select: none;
             }
 
             #HeaderStatusSource {
                 display: flex;
                 align-items: center;
                 gap: 4px;
+                pointer-events: all;
             
                 img {
                     opacity: 0.6;

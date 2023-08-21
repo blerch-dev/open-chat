@@ -128,6 +128,9 @@ class PageManager {
                 this.#embedManager.setEmbedDirectly(...(e.target.dataset?.clickArgs.split('|') ?? [])); break;
             case "clear-embed":
                 if(!e.target.classList.contains('embed')) { break; }
+                let uri = window.location.toString();
+                if(uri.indexOf('#') > 0) { uri = uri.substring(0, uri.indexOf('#')); }
+                window.history.pushState({}, document.title, uri)
                 this.#embedManager.setEmbedDirectly("");
                 this.#embedManager.setEmbedElem(undefined);
             default:
@@ -378,20 +381,23 @@ class EmbedManager {
             this.handleHash(window.location.hash);
         });
 
-        this.#default = this.#embedStatusElems?.embed?.value;
+        this.#default = this.#embedStatusElems?.embed?.textContent;
         this.handleHash(window.location.hash);
     }
 
     setEmbedDirectly(url, platform, channel) {
         // server is responsible for direct iframe info
         Log("Set Embed Directly:", url, platform, channel);
-        this.#embedStatusElems.iframe.src = url;
+        // this.#embedStatusElems.iframe.src = src;
+        if(!this.#embedStatusElems.iframe.contentDocument?.location?.replace(url)) {
+            this.#embedStatusElems.iframe.src = "";
+        }
     }
 
     setEmbed(platform, channel) {
         // client embeds will have a shortcut/table to look from
         let src = this.getEmbedSource(platform, channel);
-        this.#embedStatusElems.iframe.src = src;
+        this.#embedStatusElems.iframe.contentDocument?.location?.replace(src);
         const embed = { src, platform, channel };
         this.#currentEmbed = embed;
         this.setEmbedElem(embed);
@@ -433,11 +439,12 @@ class EmbedManager {
         }
         
         let em_str = embeds.map(imgSrc).join('');
-        Log("Setting Embed Elem:", embed);
+        Log("Setting Embed Elem:", embed, embeds);
         if(embeds.length === 0) {
             this.#embedStatusElems.type.textContent = "Offline";
             this.#embedStatusElems.source.innerHTML = "●";
             this.#embedStatusElems.embed.textContent = this.#default;
+            this.#embedStatusElems.pill.classList.remove('embed');
         } else {
             let type = embed?.live === undefined ? "Embed" : embed?.live ? "Live" : "Offline";
             Log("Setting Elems:", type, em_str, embed?.channel ?? "");
